@@ -1,13 +1,13 @@
-from __future__ import annotations
-
 import io
-from typing import Any
 
 import numpy as np
 import pandas as pd
 import streamlit as st
 
-from black_scholes import bs_greeks, bs_price, bs_price_dividend, bs_greeks_dividend
+from black_scholes import (
+    bs_greeks_dividend,
+    bs_price_dividend,
+)
 from charts import make_heatmap_figure, make_payoff_figure, make_theta_decay_figure
 
 st.set_page_config(page_title="Greek Lens", page_icon="📈", layout="wide")
@@ -15,20 +15,61 @@ st.set_page_config(page_title="Greek Lens", page_icon="📈", layout="wide")
 st.markdown(
     """
     <style>
-    .main { background: #0b1120; }
-    .stApp { background: linear-gradient(180deg, #0f172a 0%, #111827 100%); }
-    .block-container { padding-top: 1.8rem; }
-    div[data-testid="stMetricValue"] { font-size: 1.6rem; }
-    .metric-card { background: rgba(15, 23, 42, 0.72); border: 1px solid #1f2937; border-radius: 12px; padding: 12px; }
-    .score-card { background: linear-gradient(180deg, rgba(30,41,59,0.9), rgba(15,23,42,0.9)); border: 1px solid rgba(148,163,184,0.25); border-radius: 14px; padding: 14px; }
-    .preset-btn button { border-radius: 12px; min-height: 62px; }
+    .main { background: #07111f; }
+    .stApp { background: linear-gradient(180deg, #091524 0%, #111827 100%); }
+    .block-container { padding-top: 1.6rem; }
+    div[data-testid="stMetricValue"] { font-size: 1.65rem; }
+    .hero {
+        background: linear-gradient(135deg, rgba(15,118,110,0.14), rgba(59,130,246,0.12));
+        border: 1px solid rgba(148,163,184,0.18);
+        border-radius: 18px;
+        padding: 1.3rem 1.4rem;
+        margin-bottom: 1.2rem;
+    }
+    .pills {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-top: 0.8rem;
+    }
+    .pill {
+        padding: 0.38rem 0.7rem;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.85);
+        border: 1px solid rgba(148,163,184,0.25);
+        color: #e2e8f0;
+        font-size: 0.78rem;
+    }
+    .score-card {
+        background: linear-gradient(180deg, rgba(15,23,42,0.88), rgba(17,24,39,0.92));
+        border: 1px solid rgba(148,163,184,0.18);
+        border-radius: 14px;
+        padding: 1rem 0.9rem;
+        min-height: 118px;
+        box-shadow: 0 10px 25px rgba(15,23,42,0.22);
+    }
+    .summary-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 0.85rem;
+        margin: 0.5rem 0 1rem;
+    }
+    .summary-box {
+        background: rgba(15,23,42,0.72);
+        border: 1px solid rgba(148,163,184,0.16);
+        border-radius: 12px;
+        padding: 0.8rem;
+    }
+    .preset-btn button {
+        border-radius: 12px;
+        min-height: 54px;
+    }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
 
-# ---------- Strategy presets ----------
 def strategy_preset(name: str, spot: float, strike: float):
     presets = {
         "Long Call": [{"side": "Buy", "kind": "Call", "strike": strike, "premium": 3.2, "quantity": 1, "dte": 30}],
@@ -62,7 +103,6 @@ def strategy_preset(name: str, spot: float, strike: float):
     return presets.get(name, presets["Long Call"])
 
 
-# ---------- Strategy analytics ----------
 def strategy_expiry_curve(spot_range: np.ndarray, legs: list[dict]) -> np.ndarray:
     curve = np.zeros_like(spot_range, dtype=float)
     for leg in legs:
@@ -86,7 +126,19 @@ def strategy_current_curve(spot_range: np.ndarray, legs: list[dict], dte: float,
         kind = leg.get("kind", "Call")
         leg_dte = float(leg.get("dte", dte))
         prices = np.array(
-            [bs_price_dividend(s, strike, leg_dte, sigma, rate, dividend_yield=dividend_yield, option_type=kind.lower(), american_adjustment=True) for s in spot_range]
+            [
+                bs_price_dividend(
+                    s,
+                    strike,
+                    leg_dte,
+                    sigma,
+                    rate,
+                    dividend_yield=dividend_yield,
+                    option_type=kind.lower(),
+                    american_adjustment=True,
+                )
+                for s in spot_range
+            ]
         )
         curve += direction * quantity * (prices - premium)
     return curve
@@ -119,27 +171,20 @@ def trade_idea_summary(strategy_name: str, metrics: dict, spot: float, strike: f
     max_profit = metrics["max_profit"]
     max_loss = metrics["max_loss"]
     breakeven = metrics["breakeven"]
-
     if strategy_name in ["Bull Call Spread", "Bear Put Spread", "Long Butterfly", "Iron Condor"]:
-        risk_note = "Defined-risk structure suitable for a directional or range-bound thesis."
+        risk_note = "defined-risk setup suitable for a directional or range-bound thesis."
     else:
-        risk_note = "Directional exposure with uncapped risk if the trade moves against the position."
-
-    if breakeven is None:
-        breakeven_note = "No clean break-even point detected in this spot range."
-    else:
-        breakeven_note = f"Break-even is around ${breakeven:.2f} per share."
-
+        risk_note = "directional exposure with broader risk if the market moves against the trade."
+    breakeven_note = "No clear break-even point detected in this spot window." if breakeven is None else f"Break-even is around ${breakeven:.2f} per share."
     return (
         f"{strategy_name} is a {risk_note} "
         f"It offers a max profit of ${max_profit:.2f}, max loss of ${abs(max_loss):.2f}, and {breakeven_note} "
-        f"The setup is built around spot={spot:.2f}, strike={strike:.2f} with a moderate-to-strong directional bias."
+        f"The structure is designed around spot={spot:.2f} and strike={strike:.2f}."
     )
 
 
-# ---------- App ----------
 st.title("Greek Lens")
-st.caption("Options Greeks • strategy analytics • portfolio overview • trade idea insights")
+st.caption("Options Greeks • multi-leg strategy analysis • portfolio risk • trade ideas")
 
 with st.sidebar:
     st.header("Market Inputs")
@@ -149,11 +194,11 @@ with st.sidebar:
     iv = st.number_input("Implied Volatility (%)", value=20.0, min_value=0.5, max_value=300.0, step=0.5)
     rate = st.number_input("Risk-Free Rate (%)", value=4.5, min_value=-10.0, max_value=30.0, step=0.1) / 100.0
     dividend_yield = st.number_input("Dividend Yield (%)", value=0.0, min_value=0.0, max_value=15.0, step=0.1) / 100.0
-    early_adjust = st.checkbox("Apply early-exercise bias adjustment", value=True)
     sigma = iv / 100.0
+    early_adjust = st.checkbox("Apply early-exercise bias adjustment", value=True)
 
     st.markdown("---")
-    st.header("Greeks Snapshot")
+    st.header("Option Snapshot")
     call_metrics = bs_greeks_dividend(spot, strike, dte, sigma, rate, dividend_yield=dividend_yield, option_type="call", american_adjustment=early_adjust)
     put_metrics = bs_greeks_dividend(spot, strike, dte, sigma, rate, dividend_yield=dividend_yield, option_type="put", american_adjustment=early_adjust)
     st.metric("Call Price", f"${call_metrics['price']:.2f}")
@@ -180,7 +225,50 @@ with st.sidebar:
         if st.button(name, key=f"preset_{name}", use_container_width=True):
             st.session_state.strategy_preset = name
 
-# Tab selection
+st.markdown(
+    """
+    <div class="hero">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div>
+                <div style="font-size:0.8rem; letter-spacing:0.12em; color:#a5f3fc; text-transform:uppercase; font-weight:700;">Trade intelligence</div>
+                <h2 style="margin:0.25rem 0 0.35rem; font-size:2rem;">Options workstation</h2>
+            </div>
+            <div class="pills">
+                <span class="pill">Black-Scholes</span>
+                <span class="pill">Greeks</span>
+                <span class="pill">Payoff curves</span>
+                <span class="pill">Portfolio risk</span>
+            </div>
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+summary_row = st.container()
+with summary_row:
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.markdown(
+            "<div class='score-card'><div style='color:#a5f3fc; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.10em;'>Call</div><h3 style='margin:0.35rem 0 0;'>${:.2f}</h3></div>".format(call_metrics["price"]),
+            unsafe_allow_html=True,
+        )
+    with c2:
+        st.markdown(
+            "<div class='score-card'><div style='color:#a5f3fc; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.10em;'>Put</div><h3 style='margin:0.35rem 0 0;'>${:.2f}</h3></div>".format(put_metrics["price"]),
+            unsafe_allow_html=True,
+        )
+    with c3:
+        st.markdown(
+            "<div class='score-card'><div style='color:#a5f3fc; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.10em;'>Gamma</div><h3 style='margin:0.35rem 0 0;'>{:.5f}</h3></div>".format(call_metrics["gamma"]),
+            unsafe_allow_html=True,
+        )
+    with c4:
+        st.markdown(
+            "<div class='score-card'><div style='color:#a5f3fc; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.10em;'>Vega</div><h3 style='margin:0.35rem 0 0;'>${:.4f}</h3></div>".format(call_metrics["vega"]),
+            unsafe_allow_html=True,
+        )
+
 price_tab, theta_tab, strategy_tab, portfolio_tab, idea_tab, heatmap_tab = st.tabs(
     ["Live Greeks", "Theta Decay", "Strategy Builder", "Portfolio Dashboard", "Trade Idea", "Sensitivity Heatmap"]
 )
@@ -280,14 +368,14 @@ with strategy_tab:
     score = strategy_score(metrics)
     s1, s2, s3, s4 = st.columns(4)
     with s1:
-        st.markdown("<div class='score-card'><b>Setup Score</b><br><h3>{:.1f}</h3></div>".format(score), unsafe_allow_html=True)
+        st.metric("Setup Score", f"{score:.1f}")
     with s2:
-        st.markdown("<div class='score-card'><b>Max Profit</b><br><h3>${:.2f}</h3></div>".format(metrics['max_profit']), unsafe_allow_html=True)
+        st.metric("Max Profit", f"${metrics['max_profit']:.2f}")
     with s3:
-        st.markdown("<div class='score-card'><b>Max Loss</b><br><h3>${:.2f}</h3></div>".format(abs(metrics['max_loss'])), unsafe_allow_html=True)
+        st.metric("Max Loss", f"${abs(metrics['max_loss']):.2f}")
     with s4:
         breakeven_label = "N/A" if metrics['breakeven'] is None else f"${metrics['breakeven']:.2f}"
-        st.markdown("<div class='score-card'><b>Break-even</b><br><h3>{}</h3></div>".format(breakeven_label), unsafe_allow_html=True)
+        st.metric("Break-even", breakeven_label)
 
     strategy_df = pd.DataFrame(
         [{
@@ -317,7 +405,6 @@ with portfolio_tab:
         ]
     )
     portfolio_df = st.data_editor(default_portfolio, num_rows="dynamic", use_container_width=True)
-
     exposures = {
         "Net Delta": float(portfolio_df["qty"].mul(portfolio_df["delta"]).sum()),
         "Net Gamma": float(portfolio_df["qty"].mul(portfolio_df["gamma"]).sum()),
@@ -325,31 +412,32 @@ with portfolio_tab:
         "Net Vega": float(portfolio_df["qty"].mul(portfolio_df["vega"]).sum()),
         "Notional": float(portfolio_df["market_value"].sum()),
     }
-
     p1, p2, p3, p4 = st.columns(4)
     for col, label in zip([p1, p2, p3, p4], ["Net Delta", "Net Gamma", "Net Theta", "Net Vega"]):
         with col:
-            val = exposures[label.replace("Net ", "Net ")]
+            val = exposures[label]
             st.metric(label, f"{val:.2f}")
-
     st.metric("Portfolio Notional", f"${exposures['Notional']:.2f}")
-
-    exposure_df = pd.DataFrame(
-        {"Exposure": ["Delta", "Gamma", "Theta", "Vega"], "Value": [exposures["Net Delta"], exposures["Net Gamma"], exposures["Net Theta"], exposures["Net Vega"]]}
-    )
+    exposure_df = pd.DataFrame({"Exposure": ["Delta", "Gamma", "Theta", "Vega"], "Value": [exposures["Net Delta"], exposures["Net Gamma"], exposures["Net Theta"], exposures["Net Vega"]]})
     st.bar_chart(exposure_df.set_index("Exposure"), use_container_width=True)
 
 with idea_tab:
     strategy_name = st.session_state.get("strategy_preset", "Bull Call Spread")
     idea_metrics = strategy_summary_metrics(np.linspace(50, 200, 300), strategy_expiry_curve(np.linspace(50, 200, 300), strategy_preset(strategy_name, spot, strike)))
     summary_text = trade_idea_summary(strategy_name, idea_metrics, spot, strike)
-    st.markdown(f"### Trade Idea Summary")
+    st.markdown("### Trade Idea Summary")
     st.write(summary_text)
-
     idea_df = pd.DataFrame(
         {
             "Field": ["Strategy", "Bias", "Max Profit", "Max Loss", "Break-even", "Setup Score"],
-            "Value": [strategy_name, "Directional / Event-driven", f"${idea_metrics['max_profit']:.2f}", f"${abs(idea_metrics['max_loss']):.2f}", f"${idea_metrics['breakeven']:.2f}" if idea_metrics['breakeven'] is not None else "N/A", f"{strategy_score(idea_metrics):.1f}"]
+            "Value": [
+                strategy_name,
+                "Directional / event-driven",
+                f"${idea_metrics['max_profit']:.2f}",
+                f"${abs(idea_metrics['max_loss']):.2f}",
+                f"${idea_metrics['breakeven']:.2f}" if idea_metrics['breakeven'] is not None else "N/A",
+                f"{strategy_score(idea_metrics):.1f}",
+            ],
         }
     )
     st.dataframe(idea_df, use_container_width=True)
@@ -359,10 +447,9 @@ with heatmap_tab:
     spot_grid = np.linspace(max(10.0, spot * 0.5), max(200.0, spot * 2.2), 80)
     vol_shocks = np.linspace(-50, 50, 80)
     vol_grid = sigma * (1 + vol_shocks / 100.0)
-    premium_grid = np.array([
-        [bs_price_dividend(s, strike, dte, vol, rate, dividend_yield=dividend_yield, option_type=style.lower(), american_adjustment=early_adjust) for vol in vol_grid]
-        for s in spot_grid
-    ])
+    premium_grid = np.array(
+        [[bs_price_dividend(s, strike, dte, vol, rate, dividend_yield=dividend_yield, option_type=style.lower(), american_adjustment=early_adjust) for vol in vol_grid] for s in spot_grid]
+    )
     heatmap_fig = make_heatmap_figure(
         spot_grid,
         vol_shocks,
@@ -388,7 +475,7 @@ Black-Scholes framework for spot={spot:.2f}, strike={strike:.2f}, DTE={dte}, IV=
 """
 st.code(summary, language="text")
 
-st.markdown("<div style='text-align:center; color:#94a3b8; margin-top:14px;'>Built with Python, Streamlit, NumPy, SciPy, and Plotly.</div>", unsafe_allow_html=True)
+st.markdown("<div style='text-align:center; color:#94a3b8; margin-top:16px;'>Built with Python, Streamlit, NumPy, SciPy, and Plotly.</div>", unsafe_allow_html=True)
 
 
 
