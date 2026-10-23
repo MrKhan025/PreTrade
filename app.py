@@ -4,10 +4,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from black_scholes import (
-    bs_greeks_dividend,
-    bs_price_dividend,
-)
+from black_scholes import bs_greeks_dividend, bs_price_dividend
 from charts import make_heatmap_figure, make_payoff_figure, make_theta_decay_figure
 
 st.set_page_config(page_title="Greek Lens", page_icon="📈", layout="wide")
@@ -17,52 +14,91 @@ st.markdown(
     <style>
     .main { background: #07111f; }
     .stApp { background: linear-gradient(180deg, #091524 0%, #111827 100%); }
-    .block-container { padding-top: 1.6rem; }
+    .block-container { padding-top: 1.5rem; }
     div[data-testid="stMetricValue"] { font-size: 1.65rem; }
-    .hero {
-        background: linear-gradient(135deg, rgba(15,118,110,0.14), rgba(59,130,246,0.12));
+
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, rgba(15,23,42,0.98), rgba(15,23,42,0.93));
+        border-right: 1px solid rgba(148,163,184,0.14);
+    }
+    [data-testid="stSidebar"] > div {
+        padding-top: 0.75rem;
+    }
+
+    .premium-hero {
+        background: linear-gradient(135deg, rgba(16,185,129,0.12), rgba(59,130,246,0.10));
         border: 1px solid rgba(148,163,184,0.18);
         border-radius: 18px;
-        padding: 1.3rem 1.4rem;
-        margin-bottom: 1.2rem;
+        padding: 1.25rem 1.35rem;
+        margin-bottom: 1.15rem;
+        box-shadow: 0 18px 40px rgba(2, 6, 23, 0.18);
+        animation: fadeIn 0.7s ease;
     }
-    .pills {
-        display: flex;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-        margin-top: 0.8rem;
+    .precision-banner {
+        font-size: 0.72rem;
+        letter-spacing: 0.14em;
+        color: #a5f3fc;
+        text-transform: uppercase;
+        font-weight: 700;
     }
-    .pill {
+    .premium-pill {
+        display: inline-block;
         padding: 0.38rem 0.7rem;
+        margin-right: 0.4rem;
+        margin-top: 0.45rem;
         border-radius: 999px;
-        background: rgba(15, 23, 42, 0.85);
-        border: 1px solid rgba(148,163,184,0.25);
+        background: rgba(15, 23, 42, 0.96);
+        border: 1px solid rgba(148,163,184,0.2);
         color: #e2e8f0;
-        font-size: 0.78rem;
+        font-size: 0.76rem;
     }
     .score-card {
-        background: linear-gradient(180deg, rgba(15,23,42,0.88), rgba(17,24,39,0.92));
+        background: linear-gradient(180deg, rgba(15,23,42,0.90), rgba(17,24,39,0.94));
         border: 1px solid rgba(148,163,184,0.18);
         border-radius: 14px;
-        padding: 1rem 0.9rem;
-        min-height: 118px;
-        box-shadow: 0 10px 25px rgba(15,23,42,0.22);
+        padding: 0.9rem 0.85rem;
+        min-height: 110px;
+        box-shadow: 0 12px 28px rgba(15,23,42,0.22);
+        animation: riseIn 0.6s ease;
     }
-    .summary-row {
+    .trade-setup {
+        background: linear-gradient(180deg, rgba(15,23,42,0.9), rgba(2,6,23,0.96));
+        border: 1px solid rgba(148,163,184,0.14);
+        border-radius: 16px;
+        padding: 0.8rem 0.9rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 16px 34px rgba(2,6,23,0.18);
+    }
+    .trade-row {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 0.85rem;
-        margin: 0.5rem 0 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+        gap: 0.75rem;
+        margin-top: 0.55rem;
     }
-    .summary-box {
-        background: rgba(15,23,42,0.72);
-        border: 1px solid rgba(148,163,184,0.16);
+    .trade-box {
+        background: rgba(15, 23, 42, 0.68);
+        border: 1px solid rgba(148,163,184,0.08);
         border-radius: 12px;
-        padding: 0.8rem;
+        padding: 0.7rem 0.6rem;
     }
-    .preset-btn button {
+    .panel-shell {
+        background: rgba(8, 15, 28, 0.68);
+        border: 1px solid rgba(148,163,184,0.14);
+        border-radius: 18px;
+        padding: 0.9rem;
+        box-shadow: 0 12px 26px rgba(15, 23, 42, 0.16);
+        animation: fadeIn 0.8s ease;
+    }
+    .tab-container [data-testid="stHorizontalBlock"] > div {
         border-radius: 12px;
-        min-height: 54px;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes riseIn {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: translateY(0); }
     }
     </style>
     """,
@@ -204,7 +240,7 @@ with st.sidebar:
     st.metric("Call Price", f"${call_metrics['price']:.2f}")
     st.metric("Put Price", f"${put_metrics['price']:.2f}")
     st.metric("Call Delta", f"{call_metrics['delta']:.4f}")
-    st.metric("Put Delta", f"{put_metrics['delta']:.4f}")
+    st.metric("Put Delta", f"{call_metrics['delta']:.4f}")
 
     st.markdown("---")
     st.header("Preset Strategy")
@@ -227,17 +263,17 @@ with st.sidebar:
 
 st.markdown(
     """
-    <div class="hero">
+    <div class="premium-hero">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
             <div>
-                <div style="font-size:0.8rem; letter-spacing:0.12em; color:#a5f3fc; text-transform:uppercase; font-weight:700;">Trade intelligence</div>
+                <div class="precision-banner">Trade intelligence</div>
                 <h2 style="margin:0.25rem 0 0.35rem; font-size:2rem;">Options workstation</h2>
             </div>
-            <div class="pills">
-                <span class="pill">Black-Scholes</span>
-                <span class="pill">Greeks</span>
-                <span class="pill">Payoff curves</span>
-                <span class="pill">Portfolio risk</span>
+            <div>
+                <span class="premium-pill">Black-Scholes</span>
+                <span class="premium-pill">Greeks</span>
+                <span class="premium-pill">Payoff curves</span>
+                <span class="premium-pill">Portfolio risk</span>
             </div>
         </div>
     </div>
@@ -245,29 +281,45 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-summary_row = st.container()
-with summary_row:
+with st.container():
     c1, c2, c3, c4 = st.columns(4)
     with c1:
         st.markdown(
-            "<div class='score-card'><div style='color:#a5f3fc; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.10em;'>Call</div><h3 style='margin:0.35rem 0 0;'>${:.2f}</h3></div>".format(call_metrics["price"]),
+            f"<div class='score-card'><div style='color:#a5f3fc; font-size:0.76rem; letter-spacing:0.12em; text-transform:uppercase;'>Call</div><h3 style='margin:0.35rem 0 0;'>${call_metrics['price']:.2f}</h3></div>",
             unsafe_allow_html=True,
         )
     with c2:
         st.markdown(
-            "<div class='score-card'><div style='color:#a5f3fc; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.10em;'>Put</div><h3 style='margin:0.35rem 0 0;'>${:.2f}</h3></div>".format(put_metrics["price"]),
+            f"<div class='score-card'><div style='color:#a5f3fc; font-size:0.76rem; letter-spacing:0.12em; text-transform:uppercase;'>Put</div><h3 style='margin:0.35rem 0 0;'>${put_metrics['price']:.2f}</h3></div>",
             unsafe_allow_html=True,
         )
     with c3:
         st.markdown(
-            "<div class='score-card'><div style='color:#a5f3fc; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.10em;'>Gamma</div><h3 style='margin:0.35rem 0 0;'>{:.5f}</h3></div>".format(call_metrics["gamma"]),
+            f"<div class='score-card'><div style='color:#a5f3fc; font-size:0.76rem; letter-spacing:0.12em; text-transform:uppercase;'>Gamma</div><h3 style='margin:0.35rem 0 0;'>{call_metrics['gamma']:.5f}</h3></div>",
             unsafe_allow_html=True,
         )
     with c4:
         st.markdown(
-            "<div class='score-card'><div style='color:#a5f3fc; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.10em;'>Vega</div><h3 style='margin:0.35rem 0 0;'>${:.4f}</h3></div>".format(call_metrics["vega"]),
+            f"<div class='score-card'><div style='color:#a5f3fc; font-size:0.76rem; letter-spacing:0.12em; text-transform:uppercase;'>Vega</div><h3 style='margin:0.35rem 0 0;'>${call_metrics['vega']:.4f}</h3></div>",
             unsafe_allow_html=True,
         )
+
+trade_setup = st.container()
+with trade_setup:
+    st.markdown(
+        """
+        <div class="trade-setup">
+            <div style="font-size:0.74rem; letter-spacing:0.12em; text-transform:uppercase; color:#a5f3fc; margin-bottom:0.5rem;">Trade setup</div>
+            <div class="trade-row">
+                <div class="trade-box"><div style="color:#94a3b8; font-size:0.72rem;">Spot</div><div style="font-size:1.05rem; font-weight:700;">$%.2f</div></div>
+                <div class="trade-box"><div style="color:#94a3b8; font-size:0.72rem;">Strike</div><div style="font-size:1.05rem; font-weight:700;">$%.2f</div></div>
+                <div class="trade-box"><div style="color:#94a3b8; font-size:0.72rem;">DTE</div><div style="font-size:1.05rem; font-weight:700;">%d</div></div>
+                <div class="trade-box"><div style="color:#94a3b8; font-size:0.72rem;">IV</div><div style="font-size:1.05rem; font-weight:700;">%.2f%%</div></div>
+            </div>
+        </div>
+        """ % (spot, strike, dte, iv),
+        unsafe_allow_html=True,
+    )
 
 price_tab, theta_tab, strategy_tab, portfolio_tab, idea_tab, heatmap_tab = st.tabs(
     ["Live Greeks", "Theta Decay", "Strategy Builder", "Portfolio Dashboard", "Trade Idea", "Sensitivity Heatmap"]

@@ -111,7 +111,6 @@ def bs_price_dividend(
     base = bs_price(S * np.exp(-dividend_yield * normalize_dte(T)), K, T, sigma, r, option_type=option_type)
     if not american_adjustment:
         return base
-
     adjustment = 0.05 * (1.0 - np.exp(-max(r, 0.0) * normalize_dte(T)))
     return base * (1 + adjustment)
 
@@ -131,7 +130,6 @@ def bs_greeks_dividend(
     metrics = bs_greeks(adjusted_spot, K, T, sigma, r, option_type=option_type)
     if not american_adjustment:
         return metrics
-
     bias = 0.05 * (1.0 - np.exp(-max(r, 0.0) * normalize_dte(T)))
     metrics["price"] = metrics["price"] * (1 + bias)
     metrics["delta"] = metrics["delta"] * (1 + 0.5 * bias)
