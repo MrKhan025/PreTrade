@@ -1,174 +1,86 @@
 from __future__ import annotations
 
 import numpy as np
-from scipy.stats import norm
+import plotly.graph_objects as go
 
 
-def normalize_dte(days_to_expiry: float) -> float:
-    days = float(days_to_expiry)
-    if not np.isfinite(days):
-        raise ValueError("Days to expiry must be finite.")
-    if days <= 0:
-        return 1e-9
-    return max(days / 365.0, 1e-9)
-
-
-def bs_price(
-    S: float,
-    K: float,
-    T: float,
-    sigma: float,
-    r: float,
-    option_type: str = "call",
-) -> float:
-    """Black-Scholes option price under no dividends."""
-    S = float(S)
-    K = float(K)
-    sigma = float(sigma)
-    r = float(r)
-    option_type = option_type.lower()
-
-    if S <= 0 or K <= 0:
-        raise ValueError("Spot and strike must be positive.")
-    if sigma <= 0:
-        raise ValueError("Volatility must be positive.")
-
-    time = normalize_dte(T)
-    d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * time) / (sigma * np.sqrt(time))
-    d2 = d1 - sigma * np.sqrt(time)
-
-    if option_type == "call":
-        return float(S * norm.cdf(d1) - K * np.exp(-r * time) * norm.cdf(d2))
-    if option_type == "put":
-        return float(K * np.exp(-r * time) * norm.cdf(-d2) - S * norm.cdf(-d1))
-
-    raise ValueError("option_type must be 'call' or 'put'.")
-
-
-def bs_greeks(
-    S: float,
-    K: float,
-    T: float,
-    sigma: float,
-    r: float,
-    option_type: str = "call",
-) -> dict:
-    """Return price and exact Black-Scholes Greeks for a vanilla option."""
-    S = float(S)
-    K = float(K)
-    sigma = float(sigma)
-    r = float(r)
-    option_type = option_type.lower()
-
-    if S <= 0 or K <= 0:
-        raise ValueError("Spot and strike must be positive.")
-    if sigma <= 0:
-        raise ValueError("Volatility must be positive.")
-
-    time = normalize_dte(T)
-    d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * time) / (sigma * np.sqrt(time))
-    d2 = d1 - sigma * np.sqrt(time)
-    pdf_d1 = norm.pdf(d1)
-
-    if option_type == "call":
-        delta = norm.cdf(d1)
-        gamma = pdf_d1 / (S * sigma * np.sqrt(time))
-        theta = -(S * pdf_d1 * sigma) / (2 * np.sqrt(time)) - r * K * np.exp(-r * time) * norm.cdf(d2)
-        theta_daily = theta / 365.0
-        vega = S * pdf_d1 * np.sqrt(time)
-        price = bs_price(S, K, T, sigma, r, option_type="call")
-    elif option_type == "put":
-        delta = norm.cdf(d1) - 1.0
-        gamma = pdf_d1 / (S * sigma * np.sqrt(time))
-        theta = -(S * pdf_d1 * sigma) / (2 * np.sqrt(time)) + r * K * np.exp(-r * time) * norm.cdf(-d2)
-        theta_daily = theta / 365.0
-        vega = S * pdf_d1 * np.sqrt(time)
-        price = bs_price(S, K, T, sigma, r, option_type="put")
-    else:
-        raise ValueError("option_type must be 'call' or 'put'.")
-
+def dark_layout(title: str) -> dict:
     return {
-        "price": float(price),
-        "delta": float(delta),
-        "gamma": float(gamma),
-        "theta": float(theta),
-        "theta_daily": float(theta_daily),
-        "vega": float(vega),
+        "title": title,
+        "template": "plotly_dark",
+        "paper_bgcolor": "#0b1120",
+        "plot_bgcolor": "#0b1120",
+        "font": {"color": "#e2e8f0"},
+        "legend": {"orientation": "h", "yanchor": "bottom", "y": 1.12, "xanchor": "left", "x": 0.0},
+        "margin": {"l": 24, "r": 24, "t": 50, "b": 30},
     }
 
 
-def simulate_theta_decay(
-    S: float,
-    K: float,
-    sigma: float,
-    r: float,
-    option_type: str = "call",
-    dte_min: int = 1,
-    dte_max: int = 365,
-    steps: int = 80,
-):
-    dte_values = np.linspace(dte_min, dte_max, steps)
-    data = []
-    for dte in dte_values:
-        g = bs_greeks(S, K, dte, sigma, r, option_type=option_type)
-        data.append({"dte": float(dte), "price": g["price"], "delta": g["delta"]})
-    return data
+def make_theta_decay_figure(days, values, deltas, option_type: str):
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=days,
+            y=values,
+            mode="lines+markers",
+            name=f"{option_type.title()} Price",
+            line={"color": "#2dd4bf", "width": 3},
+            marker={"size": 6},
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=days,
+            y=deltas,
+            mode="lines+markers",
+            name=f"{option_type.title()} Delta",
+            line={"color": "#60a5fa", "width": 3},
+            marker={"size": 6},
+            yaxis="y2",
+        )
+    )
+    fig.update_layout(
+        **dark_layout("Theta Decay Simulator"),
+        xaxis_title="Days to Expiry",
+        yaxis_title="Option Price",
+        yaxis2={"title": "Delta", "overlaying": "y", "side": "right"},
+    )
+    return fig
 
 
+def make_payoff_figure(spot_range, expiry_curve, current_curve, title: str, underlying_price: float, strike: float):
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(x=spot_range, y=expiry_curve, mode="lines", name="Expiration P/L", line={"color": "#f59e0b", "width": 3})
+    )
+    fig.add_trace(
+        go.Scatter(x=spot_range, y=current_curve, mode="lines", name="Current T+0", line={"color": "#22c55e", "width": 3})
+    )
+    fig.add_vline(x=underlying_price, line_dash="dash", line_color="#94a3b8", annotation_text="Spot")
+    fig.add_vline(x=strike, line_dash="dot", line_color="#e2e8f0", annotation_text="Strike")
+    fig.update_layout(
+        **dark_layout(title),
+        xaxis_title="Spot Price",
+        yaxis_title="Profit / Loss",
+        hovermode="x unified",
+    )
+    return fig
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-"path":"black_scholes.py"} ,{
+def make_heatmap_figure(spot_grid, volatility_shocks, matrix, z_label: str, title: str):
+    fig = go.Figure(
+        data=go.Heatmap(
+            z=matrix,
+            x=volatility_shocks,
+            y=spot_grid,
+            colorscale="Plasma",
+            hovertemplate="Spot: %{y:.2f}<br>Vol Shock: %{x:.0f}%<br>Premium: $%{z:.2f}<extra></extra>",
+        )
+    )
+    fig.update_layout(
+        **dark_layout(title),
+        xaxis_title="Volatility Shock (%)",
+        yaxis_title="Spot Price",
+        coloraxis_colorbar={"title": z_label},
+    )
+    return fig
