@@ -97,6 +97,50 @@ def bs_greeks(
     }
 
 
+def bs_price_dividend(
+    S: float,
+    K: float,
+    T: float,
+    sigma: float,
+    r: float,
+    dividend_yield: float = 0.0,
+    option_type: str = "call",
+    american_adjustment: bool = False,
+) -> float:
+    """Approximate dividend-adjusted price with optional early-exercise premium tilt."""
+    base = bs_price(S * np.exp(-dividend_yield * normalize_dte(T)), K, T, sigma, r, option_type=option_type)
+    if not american_adjustment:
+        return base
+
+    adjustment = 0.05 * (1.0 - np.exp(-max(r, 0.0) * normalize_dte(T)))
+    return base * (1 + adjustment)
+
+
+def bs_greeks_dividend(
+    S: float,
+    K: float,
+    T: float,
+    sigma: float,
+    r: float,
+    dividend_yield: float = 0.0,
+    option_type: str = "call",
+    american_adjustment: bool = False,
+) -> dict:
+    """Approximate dividend-adjusted Greeks using a discounted spot adjustment."""
+    adjusted_spot = S * np.exp(-dividend_yield * normalize_dte(T))
+    metrics = bs_greeks(adjusted_spot, K, T, sigma, r, option_type=option_type)
+    if not american_adjustment:
+        return metrics
+
+    bias = 0.05 * (1.0 - np.exp(-max(r, 0.0) * normalize_dte(T)))
+    metrics["price"] = metrics["price"] * (1 + bias)
+    metrics["delta"] = metrics["delta"] * (1 + 0.5 * bias)
+    metrics["theta_daily"] = metrics["theta_daily"] * (1 + 0.6 * bias)
+    metrics["vega"] = metrics["vega"] * (1 + 0.3 * bias)
+    metrics["gamma"] = metrics["gamma"] * (1 + 0.35 * bias)
+    return metrics
+
+
 def simulate_theta_decay(
     S: float,
     K: float,
@@ -113,3 +157,100 @@ def simulate_theta_decay(
         metrics = bs_greeks(S, K, dte, sigma, r, option_type=option_type)
         output.append({"dte": float(dte), "price": metrics["price"], "delta": metrics["delta"]})
     return output
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

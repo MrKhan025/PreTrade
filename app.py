@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import io
+from typing import Any
 
 import numpy as np
 import pandas as pd
 import streamlit as st
 
-from black_scholes import bs_greeks, bs_price
+from black_scholes import bs_greeks, bs_price, bs_price_dividend, bs_greeks_dividend
 from charts import make_heatmap_figure, make_payoff_figure, make_theta_decay_figure
 
 st.set_page_config(page_title="Greek Lens", page_icon="📈", layout="wide")
@@ -19,6 +20,7 @@ st.markdown(
     .block-container { padding-top: 1.8rem; }
     div[data-testid="stMetricValue"] { font-size: 1.6rem; }
     .metric-card { background: rgba(15, 23, 42, 0.72); border: 1px solid #1f2937; border-radius: 12px; padding: 12px; }
+    .score-card { background: linear-gradient(180deg, rgba(30,41,59,0.9), rgba(15,23,42,0.9)); border: 1px solid rgba(148,163,184,0.25); border-radius: 14px; padding: 14px; }
     .preset-btn button { border-radius: 12px; min-height: 62px; }
     </style>
     """,
@@ -26,6 +28,7 @@ st.markdown(
 )
 
 
+# ---------- Strategy presets ----------
 def strategy_preset(name: str, spot: float, strike: float):
     presets = {
         "Long Call": [{"side": "Buy", "kind": "Call", "strike": strike, "premium": 3.2, "quantity": 1, "dte": 30}],
@@ -59,6 +62,7 @@ def strategy_preset(name: str, spot: float, strike: float):
     return presets.get(name, presets["Long Call"])
 
 
+# ---------- Strategy analytics ----------
 def strategy_expiry_curve(spot_range: np.ndarray, legs: list[dict]) -> np.ndarray:
     curve = np.zeros_like(spot_range, dtype=float)
     for leg in legs:
@@ -72,7 +76,7 @@ def strategy_expiry_curve(spot_range: np.ndarray, legs: list[dict]) -> np.ndarra
     return curve
 
 
-def strategy_current_curve(spot_range: np.ndarray, legs: list[dict], dte: float, sigma: float, rate: float) -> np.ndarray:
+def strategy_current_curve(spot_range: np.ndarray, legs: list[dict], dte: float, sigma: float, rate: float, dividend_yield: float = 0.0) -> np.ndarray:
     curve = np.zeros_like(spot_range, dtype=float)
     for leg in legs:
         quantity = leg.get("quantity", 1)
@@ -81,7 +85,9 @@ def strategy_current_curve(spot_range: np.ndarray, legs: list[dict], dte: float,
         direction = 1.0 if leg.get("side", "Buy") == "Buy" else -1.0
         kind = leg.get("kind", "Call")
         leg_dte = float(leg.get("dte", dte))
-        prices = np.array([bs_price(s, strike, leg_dte, sigma, rate, option_type=kind.lower()) for s in spot_range])
+        prices = np.array(
+            [bs_price_dividend(s, strike, leg_dte, sigma, rate, dividend_yield=dividend_yield, option_type=kind.lower(), american_adjustment=True) for s in spot_range]
+        )
         curve += direction * quantity * (prices - premium)
     return curve
 
@@ -101,22 +107,55 @@ def strategy_summary_metrics(spot_range: np.ndarray, payoff_curve: np.ndarray) -
     return {"max_profit": max_profit, "max_loss": max_loss, "breakeven": breakeven}
 
 
+def strategy_score(metrics: dict) -> float:
+    max_profit = max(metrics["max_profit"], 0.0)
+    max_loss = abs(min(metrics["max_loss"], 0.0))
+    breakeven = metrics["breakeven"] if metrics["breakeven"] is not None else 0.0
+    score = 50 + 0.6 * max_profit - 0.35 * max_loss + 0.2 * breakeven
+    return float(np.clip(score, 0, 100))
+
+
+def trade_idea_summary(strategy_name: str, metrics: dict, spot: float, strike: float) -> str:
+    max_profit = metrics["max_profit"]
+    max_loss = metrics["max_loss"]
+    breakeven = metrics["breakeven"]
+
+    if strategy_name in ["Bull Call Spread", "Bear Put Spread", "Long Butterfly", "Iron Condor"]:
+        risk_note = "Defined-risk structure suitable for a directional or range-bound thesis."
+    else:
+        risk_note = "Directional exposure with uncapped risk if the trade moves against the position."
+
+    if breakeven is None:
+        breakeven_note = "No clean break-even point detected in this spot range."
+    else:
+        breakeven_note = f"Break-even is around ${breakeven:.2f} per share."
+
+    return (
+        f"{strategy_name} is a {risk_note} "
+        f"It offers a max profit of ${max_profit:.2f}, max loss of ${abs(max_loss):.2f}, and {breakeven_note} "
+        f"The setup is built around spot={spot:.2f}, strike={strike:.2f} with a moderate-to-strong directional bias."
+    )
+
+
+# ---------- App ----------
 st.title("Greek Lens")
-st.caption("Options Greeks • multi-leg payoff builder • theta decay • strategy analytics")
+st.caption("Options Greeks • strategy analytics • portfolio overview • trade idea insights")
 
 with st.sidebar:
-    st.header("Live Greeks Calculator")
+    st.header("Market Inputs")
     spot = st.number_input("Spot Price", value=100.0, min_value=10.0, max_value=2000.0, step=5.0)
     strike = st.number_input("Strike Price", value=100.0, min_value=10.0, max_value=2000.0, step=5.0)
     dte = st.number_input("Days to Expiry", value=30, min_value=1, max_value=3650, step=1)
     iv = st.number_input("Implied Volatility (%)", value=20.0, min_value=0.5, max_value=300.0, step=0.5)
     rate = st.number_input("Risk-Free Rate (%)", value=4.5, min_value=-10.0, max_value=30.0, step=0.1) / 100.0
+    dividend_yield = st.number_input("Dividend Yield (%)", value=0.0, min_value=0.0, max_value=15.0, step=0.1) / 100.0
+    early_adjust = st.checkbox("Apply early-exercise bias adjustment", value=True)
     sigma = iv / 100.0
 
     st.markdown("---")
-    st.header("Option Snapshot")
-    call_metrics = bs_greeks(spot, strike, dte, sigma, rate, option_type="call")
-    put_metrics = bs_greeks(spot, strike, dte, sigma, rate, option_type="put")
+    st.header("Greeks Snapshot")
+    call_metrics = bs_greeks_dividend(spot, strike, dte, sigma, rate, dividend_yield=dividend_yield, option_type="call", american_adjustment=early_adjust)
+    put_metrics = bs_greeks_dividend(spot, strike, dte, sigma, rate, dividend_yield=dividend_yield, option_type="put", american_adjustment=early_adjust)
     st.metric("Call Price", f"${call_metrics['price']:.2f}")
     st.metric("Put Price", f"${put_metrics['price']:.2f}")
     st.metric("Call Delta", f"{call_metrics['delta']:.4f}")
@@ -137,13 +176,14 @@ with st.sidebar:
     ]
     if "strategy_preset" not in st.session_state:
         st.session_state.strategy_preset = "Bull Call Spread"
-
     for name in preset_names:
         if st.button(name, key=f"preset_{name}", use_container_width=True):
             st.session_state.strategy_preset = name
 
-st.subheader("Greeks Explorer")
-price_tab, theta_tab, strategy_tab, heatmap_tab = st.tabs(["Live Greeks", "Theta Decay", "Strategy Builder", "Sensitivity Heatmap"])
+# Tab selection
+price_tab, theta_tab, strategy_tab, portfolio_tab, idea_tab, heatmap_tab = st.tabs(
+    ["Live Greeks", "Theta Decay", "Strategy Builder", "Portfolio Dashboard", "Trade Idea", "Sensitivity Heatmap"]
+)
 
 with price_tab:
     metrics_df = pd.DataFrame(
@@ -181,7 +221,7 @@ with theta_tab:
     sim_values = []
     sim_deltas = []
     for day in sim_days:
-        metrics = bs_greeks(spot, strike, day, sigma, rate, option_type=sim_option_type.lower())
+        metrics = bs_greeks_dividend(spot, strike, day, sigma, rate, dividend_yield=dividend_yield, option_type=sim_option_type.lower(), american_adjustment=early_adjust)
         sim_values.append(metrics["price"])
         sim_deltas.append(metrics["delta"])
     st.plotly_chart(make_theta_decay_figure(sim_days, sim_values, sim_deltas, sim_option_type), use_container_width=True)
@@ -225,7 +265,7 @@ with strategy_tab:
 
     spot_range = np.linspace(max(0.1, spot * 0.45), max(spot * 1.8, strike * 2.0), 500)
     expiry_curve = strategy_expiry_curve(spot_range, legs)
-    current_curve = strategy_current_curve(spot_range, legs, strategy_dte, sigma, rate)
+    current_curve = strategy_current_curve(spot_range, legs, strategy_dte, sigma, rate, dividend_yield)
     payoff_fig = make_payoff_figure(
         spot_range,
         expiry_curve,
@@ -237,13 +277,17 @@ with strategy_tab:
     st.plotly_chart(payoff_fig, use_container_width=True)
 
     metrics = strategy_summary_metrics(spot_range, expiry_curve)
-    m1, m2, m3 = st.columns(3)
-    with m1:
-        st.metric("Max Profit", f"${metrics['max_profit']:.2f}")
-    with m2:
-        st.metric("Max Loss", f"${metrics['max_loss']:.2f}")
-    with m3:
-        st.metric("Break-even", f"${metrics['breakeven']:.2f}" if metrics['breakeven'] is not None else "N/A")
+    score = strategy_score(metrics)
+    s1, s2, s3, s4 = st.columns(4)
+    with s1:
+        st.markdown("<div class='score-card'><b>Setup Score</b><br><h3>{:.1f}</h3></div>".format(score), unsafe_allow_html=True)
+    with s2:
+        st.markdown("<div class='score-card'><b>Max Profit</b><br><h3>${:.2f}</h3></div>".format(metrics['max_profit']), unsafe_allow_html=True)
+    with s3:
+        st.markdown("<div class='score-card'><b>Max Loss</b><br><h3>${:.2f}</h3></div>".format(abs(metrics['max_loss'])), unsafe_allow_html=True)
+    with s4:
+        breakeven_label = "N/A" if metrics['breakeven'] is None else f"${metrics['breakeven']:.2f}"
+        st.markdown("<div class='score-card'><b>Break-even</b><br><h3>{}</h3></div>".format(breakeven_label), unsafe_allow_html=True)
 
     strategy_df = pd.DataFrame(
         [{
@@ -259,12 +303,56 @@ with strategy_tab:
     st.dataframe(strategy_df, use_container_width=True)
 
     export_csv = pd.DataFrame({"Spot": spot_range, "Expiration_PnL": expiry_curve, "Current_T0_PnL": current_curve})
-    csv_bytes = export_csv.to_csv(index=False).encode("utf-8")
-    st.download_button("Download payoff CSV", data=csv_bytes, file_name="strategy_payoff.csv", mime="text/csv")
-
+    st.download_button("Download payoff CSV", data=export_csv.to_csv(index=False).encode("utf-8"), file_name="strategy_payoff.csv", mime="text/csv")
     png_buffer = io.BytesIO()
     payoff_fig.write_image(png_buffer, format="png", width=1400, height=800)
     st.download_button("Download payoff PNG", data=png_buffer.getvalue(), file_name="strategy_payoff.png", mime="image/png")
+
+with portfolio_tab:
+    default_portfolio = pd.DataFrame(
+        [
+            {"symbol": "AAPL", "qty": 100, "delta": 0.58, "gamma": 0.02, "theta": -12.40, "vega": 18.0, "market_value": 15600.0},
+            {"symbol": "MSFT", "qty": 80, "delta": 0.44, "gamma": 0.015, "theta": -9.10, "vega": 13.2, "market_value": 14880.0},
+            {"symbol": "SPY", "qty": 60, "delta": 0.52, "gamma": 0.01, "theta": -7.30, "vega": 9.5, "market_value": 13200.0},
+        ]
+    )
+    portfolio_df = st.data_editor(default_portfolio, num_rows="dynamic", use_container_width=True)
+
+    exposures = {
+        "Net Delta": float(portfolio_df["qty"].mul(portfolio_df["delta"]).sum()),
+        "Net Gamma": float(portfolio_df["qty"].mul(portfolio_df["gamma"]).sum()),
+        "Net Theta": float(portfolio_df["qty"].mul(portfolio_df["theta"]).sum()),
+        "Net Vega": float(portfolio_df["qty"].mul(portfolio_df["vega"]).sum()),
+        "Notional": float(portfolio_df["market_value"].sum()),
+    }
+
+    p1, p2, p3, p4 = st.columns(4)
+    for col, label in zip([p1, p2, p3, p4], ["Net Delta", "Net Gamma", "Net Theta", "Net Vega"]):
+        with col:
+            val = exposures[label.replace("Net ", "Net ")]
+            st.metric(label, f"{val:.2f}")
+
+    st.metric("Portfolio Notional", f"${exposures['Notional']:.2f}")
+
+    exposure_df = pd.DataFrame(
+        {"Exposure": ["Delta", "Gamma", "Theta", "Vega"], "Value": [exposures["Net Delta"], exposures["Net Gamma"], exposures["Net Theta"], exposures["Net Vega"]]}
+    )
+    st.bar_chart(exposure_df.set_index("Exposure"), use_container_width=True)
+
+with idea_tab:
+    strategy_name = st.session_state.get("strategy_preset", "Bull Call Spread")
+    idea_metrics = strategy_summary_metrics(np.linspace(50, 200, 300), strategy_expiry_curve(np.linspace(50, 200, 300), strategy_preset(strategy_name, spot, strike)))
+    summary_text = trade_idea_summary(strategy_name, idea_metrics, spot, strike)
+    st.markdown(f"### Trade Idea Summary")
+    st.write(summary_text)
+
+    idea_df = pd.DataFrame(
+        {
+            "Field": ["Strategy", "Bias", "Max Profit", "Max Loss", "Break-even", "Setup Score"],
+            "Value": [strategy_name, "Directional / Event-driven", f"${idea_metrics['max_profit']:.2f}", f"${abs(idea_metrics['max_loss']):.2f}", f"${idea_metrics['breakeven']:.2f}" if idea_metrics['breakeven'] is not None else "N/A", f"{strategy_score(idea_metrics):.1f}"]
+        }
+    )
+    st.dataframe(idea_df, use_container_width=True)
 
 with heatmap_tab:
     style = st.radio("Heatmap Option", ["Call", "Put"], horizontal=True)
@@ -272,7 +360,7 @@ with heatmap_tab:
     vol_shocks = np.linspace(-50, 50, 80)
     vol_grid = sigma * (1 + vol_shocks / 100.0)
     premium_grid = np.array([
-        [bs_price(s, strike, dte, vol, rate, option_type=style.lower()) for vol in vol_grid]
+        [bs_price_dividend(s, strike, dte, vol, rate, dividend_yield=dividend_yield, option_type=style.lower(), american_adjustment=early_adjust) for vol in vol_grid]
         for s in spot_grid
     ])
     heatmap_fig = make_heatmap_figure(
@@ -287,7 +375,7 @@ with heatmap_tab:
 st.markdown("---")
 st.subheader("Model Summary")
 summary = f"""
-Black-Scholes framework for spot={spot:.2f}, strike={strike:.2f}, DTE={dte}, IV={iv:.2f}%, r={rate * 100:.2f}%.
+Black-Scholes framework for spot={spot:.2f}, strike={strike:.2f}, DTE={dte}, IV={iv:.2f}%, r={rate * 100:.2f}%, dividend yield={dividend_yield * 100:.2f}%.
 
 - Call price: ${call_metrics['price']:.2f}
 - Put price: ${put_metrics['price']:.2f}
@@ -296,7 +384,116 @@ Black-Scholes framework for spot={spot:.2f}, strike={strike:.2f}, DTE={dte}, IV=
 - Gamma: {call_metrics['gamma']:.5f}
 - Theta/day: ${call_metrics['theta_daily']:.4f} (call) / ${put_metrics['theta_daily']:.4f} (put)
 - Vega: ${call_metrics['vega']:.4f}
+- Early-exercise adjustment: {'On' if early_adjust else 'Off'}
 """
 st.code(summary, language="text")
 
 st.markdown("<div style='text-align:center; color:#94a3b8; margin-top:14px;'>Built with Python, Streamlit, NumPy, SciPy, and Plotly.</div>", unsafe_allow_html=True)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
