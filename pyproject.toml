@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pretrade"
-version = "1.5.1"
+version = "1.6.0"
 description = "Pre-trade options strategy workstation — pricing, Greeks, multi-leg analysis, live data, and risk before you trade"
 readme = "README.md"
 license = { text = "MIT" }

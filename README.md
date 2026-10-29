@@ -1,38 +1,44 @@
 # 📈 PreTrade — See the Trade Before You Take It
 
-> **Understand option pricing, first- and second-order Greeks, implied volatility, multi-leg strategies, and portfolio stress testing in one interactive dark-mode dashboard.**
+[![CI Tests](https://github.com/MrKhan025/PreTrade/actions/workflows/ci.yml/badge.svg)](https://github.com/MrKhan025/PreTrade/actions/workflows/ci.yml)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/downloads/)
+[![Tests: 30 Passing](https://img.shields.io/badge/tests-30%20passing-22c55e?logo=pytest&logoColor=white)](https://github.com/MrKhan025/PreTrade/tree/main/tests)
+[![Code Style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Docker Ready](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](https://github.com/MrKhan025/PreTrade/blob/main/Dockerfile)
+[![License: MIT](https://img.shields.io/badge/License-MIT-10b981.svg)](https://github.com/MrKhan025/PreTrade/blob/main/LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-38bdf8.svg)](https://github.com/MrKhan025/PreTrade/blob/main/CONTRIBUTING.md)
 
-**Tech Stack:** Python 3.10+ • Streamlit • NumPy • SciPy • Pandas • Plotly  
-**License:** MIT • **Test Suite:** 26 unit tests (`pytest`) (`unittest` & `pytest`)
+> **Institutional-grade pre-trade options workstation: Black-Scholes-Merton pricing, CRR Binomial trees, variance-reduced Monte Carlo, 1st- & 2nd-order Greeks, implied volatility solver, 12 multi-leg strategies, position sizing, live market data, WebSocket streaming, and PDF trade tickets in one dark-mode dashboard.**
+
+**Tech Stack:** Python 3.10+ • Streamlit • NumPy • SciPy • Pandas • Plotly • ReportLab • yfinance  
+**License:** MIT • **Test Suite:** 30/30 Unit Tests Passing (`pytest` & `unittest`)
 
 ## 🌟 Why PreTrade?
 
-Options trading involves multiple moving parts—spot price, time decay, implied volatility, interest rates, and dividend yields all interact simultaneously. **PreTrade** turns complex Black-Scholes-Merton derivatives math into a clear, visual decision workflow:
+Options trading involves multiple moving parts—spot price, time decay, implied volatility, interest rates, and dividend yields all interact simultaneously. **PreTrade** turns derivatives math into a clear, visual decision workflow:
 
-- **For Traders:** Test 12 multi-leg option strategies (like Iron Condors, Butterflies, Straddles, and Calendar Spreads), see exact break-even points and Probability of Profit (PoP), and stress-test your portfolio against spot and volatility shocks before risking capital.
-- **For Quants & Developers:** Import a clean, dependency-light Python pricing engine (`black_scholes.py`) with exact analytical 1st- and 2nd-order Greeks, an implied volatility root-finder, and Put-Call parity diagnostics verified against finite differences.
-- **For Students & Educators:** Visually explore how option premiums erode over time (Theta decay), how Delta and Gamma curve across strikes, and how volatility shifts impact option prices across 2D heatmaps and 3D surfaces.
+- **For Traders:** Test 12 multi-leg option strategies (Iron Condors, Butterflies, Straddles, Calendar Spreads, Verticals), inspect exact break-evens and Probability of Profit (PoP), size positions using your account risk budget and Half-Kelly criterion, and export 1-page PDF trade tickets before risking capital.
+- **For Quants & Developers:** Import a dependency-light Python pricing library (`black_scholes.py`, `binomial.py`, `monte_carlo.py`, `risk.py`) with exact analytical 1st- and 2nd-order Greeks, an implied volatility root-finder, CRR American early-exercise trees, and Cornish-Fisher Delta-Gamma-Vega VaR.
+- **For Students & Educators:** Visually explore how option premiums erode over time (Theta decay), how Delta and Gamma curve across strikes, and how volatility shifts impact option prices across 2D heatmaps, P/L attribution waterfalls, and 3D surfaces.
 
-
-## ⚡ Advanced Engines (v1.1)
+## ⚡ Quantitative & Real-Time Engines (v1.6)
 
 | Engine | Module | Capability |
 | :--- | :--- | :--- |
-| **CRR Binomial Tree** | `binomial.py` | European & American pricing; finite-difference Greeks for early-exercise options |
-| **Monte Carlo** | `monte_carlo.py` | Antithetic variates + control variate; 95% confidence intervals; pathwise Greeks |
-| **Risk Analytics** | `risk.py` | 1σ expected move, risk-neutral E[PnL] & PoP, reward/risk, delta-gamma-vega VaR |
-| **Live Market Data** | `market_data.py` | yfinance quote, watchlist batch quotes, auto-refresh polling, intraday bars, T-bill rate, ATM IV & chain |
-| **Real-time UX** | Sidebar + banner | Auto-refresh, multi-ticker watchlist, sync model inputs, live status strip |
-| **WebSocket stream** | `streaming.py` | Demo simulator or Finnhub WSS trade ticks; background thread; drive Spot from live prints |
-| **PDF Trade Ticket** | `pdf_export.py` | One-page professional PDF with Greeks table, strategy legs, break-evens & notes |
-| **Interactive Charts** | `charts.py` | Candlesticks + volume, IV smile, Greeks matrix with updatemenus, multi-strategy payoff comparison, PNG/HTML export |
-
-
-All engines are exposed inside the **Live Greeks** and **Portfolio** tabs and can be imported as a pure-Python library with zero Streamlit dependency.
+| **Black-Scholes-Merton** | `black_scholes.py` | Continuous dividend yield BSM pricing, 1st & 2nd order Greeks, Brentq IV solver, Put-Call parity, 12 strategy presets |
+| **CRR Binomial Tree** | `binomial.py` | European & American pricing; exact tree-layer Delta, Gamma & Theta plus finite-difference Vega & Rho |
+| **Monte Carlo** | `monte_carlo.py` | Antithetic variates + terminal-spot control variate; 95% confidence intervals; pathwise Delta & Vega estimators |
+| **Risk & Position Sizing** | `risk.py` | 1σ expected move, lognormal risk-neutral E[PnL] & PoP, Cornish-Fisher Delta-Gamma-Vega VaR/CVaR, contract position sizing & Half-Kelly |
+| **Live Market Data** | `market_data.py` | `yfinance` live quote, batch watchlist quotes, 13-week T-bill rate (`^IRX`), nearest ATM option chain & IV, daily/intraday OHLCV + offline fallback |
+| **WebSocket Stream** | `streaming.py` | Zero-key Demo tick simulator or live Finnhub WSS trade ticks (`wss://ws.finnhub.io`) driving Spot in real time |
+| **API Key Resolver** | `config.py` | 5-tier key resolution: Sidebar → `.streamlit/secrets.toml` → `FINNHUB_API_KEY` env → `.env` → `config.local.json` |
+| **PDF Trade Ticket** | `pdf_export.py` | One-page executive PDF report with market snapshot, Call/Put Greeks table, strategy legs, break-evens & notes |
+| **Interactive Charts** | `charts.py` | 12 dark-mode Plotly builders: Candlesticks + volume, IV smile, Greeks matrix with toggle buttons, P/L attribution waterfall, 3D surfaces |
 
 ## 🚀 Quick Start (60 Seconds)
 
-### 1. Clone & Set Up Environment
+### Option A — Local Python Environment
 
 ```bash
 git clone https://github.com/MrKhan025/PreTrade.git
@@ -40,39 +46,39 @@ cd PreTrade
 python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-```
-
-### 2. Launch the Interactive Dashboard
-
-```bash
 streamlit run app.py
 ```
 
-### 3. Run the Automated Test Suite
+### Option B — Docker Container
 
 ```bash
-python -m unittest discover -s tests -v
-# Or using pytest:
+docker build -t pretrade:latest .
+docker run --rm -p 8501:8501 pretrade:latest
+```
+
+### Run the Automated Test Suite (30 Unit Tests)
+
+```bash
 pytest -v
+# Or using standard library unittest:
+python -m unittest discover -s tests -v
 ```
 
 ## 🖥️ Workstation Tour (7 Interactive Tabs)
 
-Once you launch `streamlit run app.py`, use the **left sidebar** to set your market inputs (**Spot Price**, **Strike Price**, **Days to Expiry**, **Implied Volatility**, **Risk-Free Rate**, and **Dividend Yield**) and explore seven specialized tabs:
+Use the **left sidebar** to fetch a live equity/ETF ticker (e.g., `AAPL`, `SPY`, `NVDA`, `TSLA`), start the real-time tick stream, or adjust market inputs (**Spot Price**, **Strike Price**, **Days to Expiry**, **Implied Volatility**, **Risk-Free Rate**, and **Dividend Yield**):
 
 | Tab | What It Does | Key Insights Provided |
 | :--- | :--- | :--- |
-| **1. Live Greeks & IV Solver** | Displays full Call/Put valuation, 1st & 2nd order Greeks, Put-Call parity check, 2D Greek profiles, 3D surfaces, and an Implied Volatility solver | Intrinsic vs. extrinsic value, ITM probability, solved IV from market prices, and interactive 3D Spot × DTE surfaces |
+| **1. Live Greeks & IV Solver** | Full Call/Put valuation, 1st & 2nd order Greeks, Put-Call parity check, 2D Greek profiles, CRR Binomial & Monte Carlo cross-validation, 3D surfaces, and IV solver | Intrinsic vs. extrinsic value, ITM probability, solved IV from market prices, 1σ expected move, and 3D Spot × DTE surfaces |
 | **2. Theta Decay** | Simulates how an option's total value, extrinsic time value, and Delta evolve day-by-day from entry until expiration | Visualizes the non-linear "theta cliff" inside 30 DTE with a milestone table at 90, 60, 45, 30, 21, 14, 7, 3, and 1 DTE |
 | **3. Strategy Builder** | Builds 12 preset strategies or custom 1-to-4-leg positions with shaded profit/loss zones | Compares **Expiration P/L**, **Mid-Horizon P/L**, and **Current T+0 P/L**, marking all break-even prices, PoP, Setup Score, and Net Greeks |
-| **4. Portfolio Dashboard** | Editable multi-asset table (`st.data_editor`) tracking net Greek exposures across tickers | Computes Net Delta, Gamma, Theta, Vega, Notional value, and a **2nd-Order Taylor Stress Matrix** across ±10% Spot and ±5 pt IV shocks |
-| **5. Trade Idea** | Generates an executive trade ticket and plain-English risk summary for the selected strategy | Summarizes market bias, net debit/credit, max profit/loss per share, break-even points, PoP, and risk-adjusted setup score |
+| **4. Portfolio Dashboard** | Editable multi-asset table (`st.data_editor`) tracking net Greek exposures across tickers | Computes Net Delta, Gamma, Theta, Vega, Notional value, **2nd-Order Taylor Stress Matrix**, and **1-Day 95% Delta-Gamma-Vega VaR** |
+| **5. Trade Idea & Sizing** | Generates an executive trade ticket, **Position Sizing & Half-Kelly Calculator**, and 1-click PDF export | Computes exact recommended contracts from account equity & risk %, dollar capital at risk, and downloadable PDF trade ticket |
 | **6. Sensitivity Heatmap** | Maps 60×60 scenario grids across Spot Price (±45%) and Volatility Shocks (±50%) | Visualizes how Premium, Net P/L, Delta, Gamma, Theta/day, Vega, or Vanna behave under simultaneous price and volatility moves |
-| **7. Charts Studio** | Interactive candlesticks, IV smile, multi-Greek matrix with toggle buttons, strategy payoff overlays | Zoom/pan/spike crosshairs, MA overlays, HTML export of any figure |
+| **7. Charts Studio** | Interactive Candlesticks + MA overlays, IV Smile, Greeks Matrix with toggle buttons, Strategy Comparison, and **P/L Attribution Waterfall** | Decomposes option P/L into Delta, Gamma, Theta, Vega & Vanna bars; exports standalone interactive HTML charts |
 
 ## 🧭 Plain-English Guide to the Options Greeks
-
-PreTrade computes both **First-Order Greeks** (direct sensitivity to market inputs) and **Second-Order Greeks** (how the Greeks themselves change as the market moves).
 
 ### First-Order Greeks
 
@@ -94,130 +100,90 @@ PreTrade computes both **First-Order Greeks** (direct sensitivity to market inpu
 | **Speed** | `∂Γ / ∂S` (`speed`) | Rate of change in **Gamma** per $1.00 move in the underlying Spot price | Identifies where Gamma pin risk accelerates fastest near expiration |
 | **Prob. ITM** | `N(d₂)` / `N(-d₂)` (`prob_itm`) | Risk-neutral probability that the option expires In-The-Money | Gives a theoretically grounded probability of finishing in-the-money at expiry |
 
-## 🧩 Built-In Multi-Leg Strategy Presets
-
-All 12 presets automatically price each leg at its fair Black-Scholes-Merton value based on your current sidebar inputs, or you can toggle **Customize strategy legs manually** to build any 1-to-4-leg structure.
-
-| Strategy Preset | Market Bias | Structure | Risk / Reward Profile | Ideal Market Environment |
-| :--- | :--- | :--- | :--- | :--- |
-| **Bull Call Spread** | Moderately Bullish | Buy lower-strike Call + Sell higher-strike Call | Defined Risk / Capped Reward | Steady upward trend with elevated IV where you want to reduce call cost |
-| **Bear Put Spread** | Moderately Bearish | Buy higher-strike Put + Sell lower-strike Put | Defined Risk / Capped Reward | Controlled pullback toward a target support level |
-| **Long Butterfly** | Neutral (Target Pin) | Buy 1 ITM Call + Sell 2 ATM Calls + Buy 1 OTM Call | Low Cost / High Reward near center strike | Low-volatility pinning around a specific price target at expiration |
-| **Iron Condor** | Neutral (Range-Bound) | Bull Put Spread + Bear Call Spread (4 legs) | Defined Risk / Net Credit Income | Sideways market trading within a well-defined support/resistance channel |
-| **Iron Butterfly** | Neutral (Tight Range) | Short ATM Straddle + Long OTM Wings (4 legs) | Defined Risk / High Net Credit | Expecting implied volatility crush and minimal underlying movement |
-| **Calendar Spread** | Neutral / Term-Structure | Sell near-term ATM Call + Buy longer-term ATM Call | Defined Debit / Positive Theta Carry | Capturing faster front-month Theta decay while staying long back-month Vega |
-| **Long Straddle** | Bi-Directional Breakout | Buy ATM Call + Buy ATM Put | Defined Debit / Uncapped Move Potential | Major catalyst (earnings, CPI, FOMC) expected to move the stock beyond priced IV |
-| **Long Strangle** | Bi-Directional Tail Move | Buy OTM Put + Buy OTM Call | Lower Debit / Wider Break-Evens | Expecting an explosive directional move in either direction |
-| **Long Call / Put** | Strong Directional | Single long Call or Put leg | Defined Premium Risk / Convex Upside | High-conviction directional breakout with rising implied volatility |
-| **Short Call / Put** | Income / Premium Decay | Single short Call or Put leg | Capped Credit / Uncapped (or Strike) Risk | Collecting time decay when implied volatility is overstated |
-
 ## 💻 Using PreTrade as a Python Library
 
-All pricing, Greek calculations, implied volatility root-finding, and strategy analytics live in `black_scholes.py` with zero UI dependencies—so you can import them directly into notebooks, backtesters, or trading scripts:
+All pricing, Greek calculations, binomial trees, Monte Carlo simulations, and risk analytics are decoupled from Streamlit so you can import them directly into research notebooks or backtesters:
 
 ```python
 import numpy as np
-from black_scholes import (
-    bs_greeks_dividend,
-    implied_volatility,
-    put_call_parity_check,
-    strategy_preset,
-    strategy_expiry_curve,
-    strategy_summary_metrics,
-)
+from black_scholes import bs_greeks_dividend, implied_volatility, strategy_preset
+from binomial import crr_price, crr_greeks
+from monte_carlo import mc_price
+from risk import expected_move, strategy_risk_metrics, position_sizing_recommendation
 
-# 1. Compute 1st- and 2nd-order Greeks for an option with a 1.5% dividend yield
-metrics = bs_greeks_dividend(
-    S=105.0, K=100.0, T=30, sigma=0.22, r=0.045, dividend_yield=0.015, option_type="call"
-)
-print(f"Call Price: ${metrics['price']:.2f} | Delta: {metrics['delta']:.4f} | Gamma: {metrics['gamma']:.5f}")
-print(f"Theta/day:  ${metrics['theta_daily']:.4f} | Vega (1%): ${metrics['vega_pct']:.4f} | Vanna: {metrics['vanna']:.4f}")
+# 1. Analytical BSM 1st- and 2nd-order Greeks
+metrics = bs_greeks_dividend(S=105.0, K=100.0, T=30, sigma=0.22, r=0.045, dividend_yield=0.015, option_type="call")
+print(f"BSM Call: ${metrics['price']:.2f} | Delta: {metrics['delta']:.4f} | Vanna: {metrics['vanna']:.4f}")
 
-# 2. Solve Implied Volatility from an observed market option price
-iv_solved = implied_volatility(
-    market_price=6.85, S=105.0, K=100.0, T=30, r=0.045, dividend_yield=0.015, option_type="call"
-)
-print(f"Solved Implied Volatility: {iv_solved * 100:.2f}%")
+# 2. American Put valuation & exact tree-node Greeks via CRR Binomial Tree
+amer_put = crr_greeks(S=95.0, K=100.0, T=60, sigma=0.25, r=0.045, option_type="put", style="american", steps=200)
+print(f"American Put: ${amer_put['price']:.2f} | Delta: {amer_put['delta']:.4f} | Gamma: {amer_put['gamma']:.5f}")
 
-# 3. Analyze a 4-leg Iron Condor across a Spot grid
-spot_grid = np.linspace(75, 135, 500)
+# 3. Variance-reduced Monte Carlo pricing with 95% confidence interval
+mc = mc_price(S=105.0, K=100.0, T=30, sigma=0.22, r=0.045, dividend_yield=0.015, option_type="call", n_paths=50_000)
+print(f"MC Call: ${mc['price']:.4f} ± {1.96 * mc['stderr']:.4f} (BSM benchmark: ${mc['bsm_benchmark']:.4f})")
+
+# 4. Strategy risk & contract position sizing for a $25,000 account risking 2%
 legs = strategy_preset("Iron Condor", spot=105.0, strike=105.0, dte=30, sigma=0.22, rate=0.045)
-expiry_pnl = strategy_expiry_curve(spot_grid, legs, sigma=0.22, rate=0.045)
-summary = strategy_summary_metrics(spot_grid, expiry_pnl, spot=105.0, sigma=0.22, dte=30, rate=0.045)
-print(f"Break-Evens: {summary['breakevens']} | PoP: {summary['prob_profit']:.1f}%")
+rm = strategy_risk_metrics(spot=105.0, legs=legs, sigma=0.22, rate=0.045, dte=30)
+sizing = position_sizing_recommendation(25_000, 2.0, rm["max_loss"], rm["max_profit"], rm["prob_profit"])
+print(f"Recommended Contracts: {sizing['recommended_contracts']} | Capital at Risk: ${sizing['total_dollar_risk']:.2f}")
 ```
-
-## 📐 Mathematical Reference (Black-Scholes-Merton)
-
-Under constant volatility `σ`, continuous risk-free rate `r`, continuous dividend yield `q`, and time to expiration `T = DTE / 365`:
-
-- **Call Price:** `C = S · e⁻qᵀ · N(d₁) - K · e⁻ʳᵀ · N(d₂)`
-- **Put Price:** `P = K · e⁻ʳᵀ · N(-d₂) - S · e⁻qᵀ · N(-d₁)`
-- **Put-Call Parity:** `C - P = S · e⁻qᵀ - K · e⁻ʳᵀ`
-
-where `N(·)` is the standard normal cumulative distribution function, `φ(·)` is the standard normal probability density function, and:
-
-- `d₁ = [ ln(S / K) + (r - q + 0.5 · σ²) · T ] / (σ · √T)`
-- `d₂ = d₁ - σ · √T`
-
-| Analytical Formula | Call Option | Put Option |
-| :--- | :--- | :--- |
-| **Delta (`∂V/∂S`)** | `e⁻qᵀ · N(d₁)` | `-e⁻qᵀ · N(-d₁)` |
-| **Gamma (`∂²V/∂S²`)** | `[ e⁻qᵀ · φ(d₁) ] / (S · σ · √T)` | `[ e⁻qᵀ · φ(d₁) ] / (S · σ · √T)` |
-| **Vega (`∂V/∂σ`)** | `S · e⁻qᵀ · φ(d₁) · √T` | `S · e⁻qᵀ · φ(d₁) · √T` |
-| **Theta (`∂V/∂t`)** | `-[S · e⁻qᵀ · φ(d₁) · σ] / (2√T) - r · K · e⁻ʳᵀ · N(d₂) + q · S · e⁻qᵀ · N(d₁)` | `-[S · e⁻qᵀ · φ(d₁) · σ] / (2√T) + r · K · e⁻ʳᵀ · N(-d₂) - q · S · e⁻qᵀ · N(-d₁)` |
-| **Rho (`∂V/∂r`)** | `K · T · e⁻ʳᵀ · N(d₂)` | `-K · T · e⁻ʳᵀ · N(-d₂)` |
-| **Vanna (`∂Δ/∂σ`)** | `-e⁻qᵀ · φ(d₁) · (d₂ / σ)` | `-e⁻qᵀ · φ(d₁) · (d₂ / σ)` |
-| **Volga (`∂ν/∂σ`)** | `Vega · (d₁ · d₂ / σ)` | `Vega · (d₁ · d₂ / σ)` |
 
 ## 📂 Project Structure
 
 ```text
 PreTrade/
-├── app.py                      # Streamlit interactive 7-tab options workstation
-├── black_scholes.py            # Core BSM pricing, 1st/2nd-order Greeks, IV solver, strategy engine
-├── binomial.py                 # Cox-Ross-Rubinstein binomial tree (European & American)
-├── monte_carlo.py              # Variance-reduced Monte Carlo pricing engine
-├── risk.py                     # Expected move, strategy PoP/E[PnL], portfolio VaR & CVaR
-├── market_data.py              # Live quotes, option chain, history & ATM IV via yfinance
-├── streaming.py                # Demo simulator & Finnhub WebSocket real-time tick streamer
-├── config.py                   # Multi-source API key resolution (.env, secrets, env, JSON)
-├── pdf_export.py               # Professional PDF trade-ticket generator (ReportLab)
-├── charts.py                   # Dark-mode Plotly 2D/3D & Studio visualizations
-├── .env.example                # Environment variable template for API keys
-├── requirements.txt            # Runtime & test dependencies
-├── pyproject.toml              # PEP 621 package metadata & tool configuration
+├── app.py                              # Streamlit interactive 7-tab options workstation
+├── black_scholes.py                    # Core BSM pricing, 1st/2nd-order Greeks, IV solver, strategy engine
+├── binomial.py                         # Cox-Ross-Rubinstein binomial tree (European & American + Greeks)
+├── monte_carlo.py                      # Variance-reduced Monte Carlo pricing & pathwise Greeks
+├── risk.py                             # Expected move, strategy PoP/E[PnL], VaR/CVaR & position sizing
+├── market_data.py                      # Live quotes, option chain, history & ATM IV via yfinance
+├── streaming.py                        # Demo simulator & Finnhub WebSocket real-time tick streamer
+├── config.py                           # Multi-source API key resolution (.env, secrets, env, JSON)
+├── pdf_export.py                       # Professional PDF trade-ticket generator (ReportLab)
+├── charts.py                           # 12 dark-mode Plotly 2D/3D & Studio visualizations
+├── .env.example                        # Environment variable template for API keys
+├── .streamlit/
+│   ├── config.toml                     # Native dark-mode theme & server security config
+│   └── secrets.toml.example            # Template for Streamlit Community Cloud secrets
+├── Dockerfile                          # Production container image with healthcheck
+├── .dockerignore                       # Container build exclusions
+├── Makefile                            # Developer task runner (install, run, test, lint, docker)
+├── requirements.txt                    # Runtime & test dependencies
+├── pyproject.toml                      # PEP 621 package metadata, pytest & ruff configuration
 ├── tests/
-│   ├── test_black_scholes.py   # BSM, parity, IV solver, and multi-leg strategy tests
-│   ├── test_advanced.py        # Binomial, Monte Carlo, and Risk engine tests
-│   └── test_market_pdf.py      # Market data, config, streaming, and PDF export tests
-├── .github/workflows/ci.yml    # GitHub Actions CI (Python 3.10–3.12)
-├── CONTRIBUTING.md
-├── README.md
-├── LICENSE
-└── .gitignore
+│   ├── test_black_scholes.py           # BSM benchmarks, parity, finite differences, IV & strategy tests
+│   ├── test_advanced.py                # Binomial, Monte Carlo, Risk & Position Sizing tests
+│   └── test_market_pdf.py              # Market data, config, streaming & PDF export tests
+├── .github/
+│   ├── workflows/ci.yml                # GitHub Actions CI across Python 3.10–3.12
+│   ├── dependabot.yml                  # Automated weekly dependency security updates
+│   ├── ISSUE_TEMPLATE/
+│   │   ├── bug_report.md               # Structured bug report template
+│   │   └── feature_request.md          # Structured feature request template
+│   └── PULL_REQUEST_TEMPLATE.md        # Pull request checklist template
+├── CHANGELOG.md                        # Release version history
+├── CONTRIBUTING.md                     # Contributor setup & testing guidelines
+├── SECURITY.md                         # Secret hygiene & vulnerability reporting policy
+├── LICENSE                             # MIT License
+└── README.md                           # Project documentation & mathematical reference
 ```
 
+## 🔑 API Keys & Configuration
 
-## 🔑 Finnhub API key (WebSocket)
-
-PreTrade resolves the key in this order (first match wins):
+Standard quotes, option chains, historical bars, and the **Demo** WebSocket streamer work **out of the box with no API key required**. To stream live market trade ticks via Finnhub WebSocket (`wss://ws.finnhub.io`), PreTrade resolves `FINNHUB_API_KEY` in this priority order:
 
 1. Sidebar password field  
 2. Streamlit secrets (`.streamlit/secrets.toml`)  
 3. Environment variable `FINNHUB_API_KEY`  
-4. Project `.env` file  
+4. Project `.env` file (`cp .env.example .env`)  
 5. `config.local.json`
 
-```bash
-cp .env.example .env
-# edit .env → FINNHUB_API_KEY=...
-streamlit run app.py
-```
-
-Free key: https://finnhub.io/register — never commit real keys (`.env` and `config.local.json` are gitignored).
+Get a free key at [finnhub.io/register](https://finnhub.io/register) — never commit real keys (`.env`, `.streamlit/secrets.toml`, and `config.local.json` are gitignored).
 
 ## 🤝 Contributing & License
 
-Contributions, bug reports, and feature requests are welcome! Feel free to open an issue or submit a pull request.  
-Released under the **MIT License**—see `LICENSE` for full details.
+Contributions, bug reports, and feature requests are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md) for details.  
+Released under the **MIT License**—see [LICENSE](LICENSE) for full details.

@@ -36,7 +36,7 @@ from charts import (
 )
 from binomial import crr_price, crr_greeks
 from monte_carlo import mc_price
-from risk import expected_move, strategy_risk_metrics, portfolio_var_delta_normal
+from risk import expected_move, strategy_risk_metrics, portfolio_var_delta_normal, position_sizing_recommendation
 from streaming import start_stream, stop_stream, stream_snapshot, apply_stream_price_to_quote, get_manager
 from config import get_finnhub_api_key, finnhub_key_source, mask_key
 from market_data import (
@@ -1279,6 +1279,29 @@ with idea_tab:
         }
     )
     st.dataframe(idea_df, use_container_width=True, hide_index=True)
+
+    st.markdown("#### Position Sizing & Risk-Budget Calculator (100x Contract Multiplier)")
+    ps1, ps2 = st.columns(2)
+    with ps1:
+        acct_size = st.number_input("Account Equity ($)", min_value=500.0, max_value=10_000_000.0, value=25_000.0, step=1_000.0, key="ps_acct")
+    with ps2:
+        risk_budget_pct = st.slider("Max Risk per Trade (% of Account)", min_value=0.25, max_value=10.0, value=2.0, step=0.25, key="ps_risk_pct")
+    sizing = position_sizing_recommendation(
+        account_size=acct_size,
+        risk_pct=risk_budget_pct,
+        max_loss_per_share=abs(idea_metrics["max_loss"]),
+        max_profit_per_share=idea_metrics["max_profit"],
+        prob_profit=idea_metrics["prob_profit"],
+    )
+    k1, k2, k3, k4 = st.columns(4)
+    with k1:
+        st.metric("Recommended Size", f"{sizing['recommended_contracts']} contracts")
+    with k2:
+        st.metric("Risk Budget ($)", f"${sizing['risk_budget_dollars']:,.2f}")
+    with k3:
+        st.metric("Capital at Risk", f"${sizing['total_dollar_risk']:,.2f}", f"${sizing['loss_per_contract']:,.0f} / contract")
+    with k4:
+        st.metric("Half-Kelly Allocation", f"{sizing['half_kelly_pct']:.2f}%")
 
     st.markdown("---")
     st.subheader("Export Trade Ticket (PDF)")

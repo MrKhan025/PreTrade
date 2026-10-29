@@ -175,3 +175,54 @@ def portfolio_var_delta_normal(
         "confidence": conf,
         "horizon_days": float(horizon_days),
     }
+
+
+def position_sizing_recommendation(
+    account_size: float,
+    risk_pct: float,
+    max_loss_per_share: float,
+    max_profit_per_share: float,
+    prob_profit: float,
+    contract_multiplier: int = 100,
+) -> dict[str, float | int]:
+    """Compute position sizing (contracts, dollar risk, max reward, and fractional Kelly)
+    given an account size, max risk % per trade, and strategy per-share metrics.
+    """
+    acct = max(float(account_size), 0.0)
+    r_pct = float(np.clip(risk_pct, 0.05, 100.0))
+    mult = max(int(contract_multiplier), 1)
+
+    risk_budget_dollars = acct * (r_pct / 100.0)
+    loss_per_share = abs(float(max_loss_per_share))
+    profit_per_share = max(float(max_profit_per_share), 0.0)
+    loss_per_contract = loss_per_share * mult
+    profit_per_contract = profit_per_share * mult
+
+    if loss_per_contract > 1e-6:
+        raw_contracts = int(np.floor(risk_budget_dollars / loss_per_contract))
+        contracts = max(raw_contracts, 0)
+        b_odds = profit_per_share / loss_per_share
+    else:
+        contracts = 0
+        b_odds = 0.0
+
+    p_win = float(np.clip(prob_profit / 100.0, 0.0, 1.0))
+    q_loss = 1.0 - p_win
+    if b_odds > 1e-6:
+        full_kelly = max((p_win * b_odds - q_loss) / b_odds, 0.0)
+    else:
+        full_kelly = 0.0
+    half_kelly_pct = float(np.clip(0.5 * full_kelly * 100.0, 0.0, 25.0))
+
+    total_risk = contracts * loss_per_contract
+    total_max_profit = contracts * profit_per_contract
+
+    return {
+        "risk_budget_dollars": float(risk_budget_dollars),
+        "loss_per_contract": float(loss_per_contract),
+        "profit_per_contract": float(profit_per_contract),
+        "recommended_contracts": int(contracts),
+        "total_dollar_risk": float(total_risk),
+        "total_dollar_max_profit": float(total_max_profit),
+        "half_kelly_pct": half_kelly_pct,
+    }
