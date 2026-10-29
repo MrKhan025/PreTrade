@@ -33,6 +33,7 @@ from charts import (
     make_interactive_greeks_matrix,
     make_comparison_payoff_figure,
     make_pnl_waterfall_figure,
+    make_expected_move_cone_figure,
 )
 from binomial import crr_price, crr_greeks
 from monte_carlo import mc_price
@@ -1439,7 +1440,7 @@ with charts_tab:
     )
     studio_mode = st.radio(
         "Chart mode",
-        ["Price History", "IV Smile", "Greeks Matrix", "Strategy Comparison", "P/L Waterfall"],
+        ["Price History", "IV Smile", "Greeks Matrix", "Strategy Comparison", "P/L Waterfall", "Volatility Cone"],
         horizontal=True,
         key="studio_mode",
     )
@@ -1600,7 +1601,7 @@ with charts_tab:
                 key="dl_compare_html",
             )
 
-    else:  # P/L Waterfall
+    elif studio_mode == "P/L Waterfall":
         st.caption("Decompose estimated option P/L into Delta, Gamma, Theta, Vega, and Vanna contributions.")
         w1, w2, w3, w4 = st.columns(4)
         with w1:
@@ -1625,6 +1626,19 @@ with charts_tab:
             title=f"{wf_side} P/L Attribution Waterfall (Spot {wf_ds_pct:+.1f}%, IV {wf_div_pts:+.1f} pts, {wf_days}d)",
         )
         st.plotly_chart(wf_fig, use_container_width=True, config=PLOTLY_CONFIG)
+
+    elif studio_mode == "Volatility Cone":
+        st.caption("Project 1σ (68%) and 2σ (95%) forward underlying price bands from today to expiration.")
+        cone_fig = make_expected_move_cone_figure(
+            spot=spot,
+            sigma=sigma,
+            dte=int(dte),
+            rate=rate,
+            dividend_yield=dividend_yield,
+            strike=strike,
+            title=f"Forward Volatility Cone ({dte} DTE, IV={iv:.1f}%)",
+        )
+        st.plotly_chart(cone_fig, use_container_width=True, config=PLOTLY_CONFIG)
 st.markdown("---")
 st.subheader("Model Summary")
 summary = f"""Black-Scholes-Merton framework for spot=${spot:.2f}, strike=${strike:.2f}, DTE={dte}, IV={iv:.2f}%, r={rate * 100:.2f}%, dividend yield={dividend_yield * 100:.2f}%.

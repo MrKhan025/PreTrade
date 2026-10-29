@@ -623,3 +623,98 @@ def make_pnl_waterfall_figure(
         yaxis={"title": "P/L Contribution ($)", "gridcolor": "rgba(148,163,184,0.12)"},
     )
     return fig
+
+
+def make_expected_move_cone_figure(
+    spot: float,
+    sigma: float,
+    dte: int,
+    rate: float = 0.045,
+    dividend_yield: float = 0.0,
+    strike: float | None = None,
+    title: str = "Forward Volatility Cone (1σ & 2σ Expected Move)",
+) -> go.Figure:
+    """Create a forward 1-sigma (68%) and 2-sigma (95%) probability cone across DTE."""
+    horizon = max(int(dte), 5)
+    days = np.linspace(0.0, float(horizon), 100)
+    years = days / 365.0
+    drift = (float(rate) - float(dividend_yield)) * years
+    std_t = float(sigma) * np.sqrt(years)
+
+    forward = float(spot) * np.exp(drift)
+    upper_1s = forward * np.exp(std_t)
+    lower_1s = forward * np.exp(-std_t)
+    upper_2s = forward * np.exp(2.0 * std_t)
+    lower_2s = forward * np.exp(-2.0 * std_t)
+
+    fig = go.Figure()
+    # 2-sigma band
+    fig.add_trace(
+        go.Scatter(
+            x=np.concatenate([days, days[::-1]]),
+            y=np.concatenate([upper_2s, lower_2s[::-1]]),
+            fill="toself",
+            fillcolor="rgba(56, 189, 248, 0.10)",
+            line={"color": "rgba(56, 189, 248, 0.30)", "width": 1, "dash": "dot"},
+            name="2σ Cone (95% CI)",
+            hoverinfo="skip",
+        )
+    )
+    # 1-sigma band
+    fig.add_trace(
+        go.Scatter(
+            x=np.concatenate([days, days[::-1]]),
+            y=np.concatenate([upper_1s, lower_1s[::-1]]),
+            fill="toself",
+            fillcolor="rgba(45, 212, 191, 0.18)",
+            line={"color": "#2dd4bf", "width": 2},
+            name="1σ Cone (68% CI)",
+            hoverinfo="skip",
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=days,
+            y=forward,
+            mode="lines",
+            name="Forward Drift Path",
+            line={"color": "#f8fafc", "width": 2.2, "dash": "dash"},
+            hovertemplate="Day +%{x:.1f}<br>Forward: $%{y:.2f}<extra></extra>",
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=days,
+            y=upper_1s,
+            mode="lines",
+            name="+1σ Upper Bound",
+            line={"color": "#2dd4bf", "width": 1.8},
+            hovertemplate="Day +%{x:.1f}<br>+1σ: $%{y:.2f}<extra></extra>",
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=days,
+            y=lower_1s,
+            mode="lines",
+            name="-1σ Lower Bound",
+            line={"color": "#f43f5e", "width": 1.8},
+            hovertemplate="Day +%{x:.1f}<br>-1σ: $%{y:.2f}<extra></extra>",
+        )
+    )
+    if strike is not None and strike > 0:
+        fig.add_hline(
+            y=float(strike),
+            line_dash="dot",
+            line_color="#f59e0b",
+            annotation_text=f"Strike ${float(strike):.2f}",
+            annotation_position="top right",
+        )
+
+    fig.update_layout(
+        **dark_layout(title),
+        xaxis={"title": "Days Forward from Today", "gridcolor": "rgba(148,163,184,0.12)"},
+        yaxis={"title": "Projected Spot Range ($)", "gridcolor": "rgba(148,163,184,0.12)"},
+        hovermode="x unified",
+    )
+    return fig
