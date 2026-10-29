@@ -5,7 +5,10 @@ on:
     branches: ["main", "master"]
   pull_request:
     branches: ["main", "master"]
-
+name: "My workflow"
+permissions:
+  contents: read
+  pull-requests: write
 jobs:
   test:
     name: Python ${{ matrix.python-version }}
