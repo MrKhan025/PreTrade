@@ -1416,7 +1416,7 @@ with charts_tab:
     )
     studio_mode = st.radio(
         "Chart mode",
-        ["Price History", "IV Smile", "Greeks Matrix", "Strategy Comparison"],
+        ["Price History", "IV Smile", "Greeks Matrix", "Strategy Comparison", "P/L Waterfall"],
         horizontal=True,
         key="studio_mode",
     )
@@ -1541,7 +1541,7 @@ with charts_tab:
             key="dl_greeks_html",
         )
 
-    else:  # Strategy Comparison
+    elif studio_mode == "Strategy Comparison":
         st.caption("Overlay expiry P/L for multiple presets under the current market inputs.")
         compare_names = st.multiselect(
             "Strategies to compare",
@@ -1577,6 +1577,31 @@ with charts_tab:
                 key="dl_compare_html",
             )
 
+    else:  # P/L Waterfall
+        st.caption("Decompose estimated option P/L into Delta, Gamma, Theta, Vega, and Vanna contributions.")
+        w1, w2, w3, w4 = st.columns(4)
+        with w1:
+            wf_side = st.selectbox("Option Type", ["Call", "Put"], key="wf_side")
+        with w2:
+            wf_ds_pct = st.slider("Spot Move (%)", -20.0, 20.0, 5.0, 0.5, key="wf_ds")
+        with w3:
+            wf_div_pts = st.slider("IV Shift (vol pts)", -15.0, 15.0, 2.0, 0.5, key="wf_div")
+        with w4:
+            wf_days = st.slider("Days Elapsed", 0, max(int(dte) - 1, 1), min(5, max(int(dte) - 1, 1)), 1, key="wf_days")
+        wf_metrics = call_metrics if wf_side == "Call" else put_metrics
+        d_spot = spot * (wf_ds_pct / 100.0)
+        wf_components = {
+            "Delta P/L": wf_metrics["delta"] * d_spot,
+            "Gamma P/L": 0.5 * wf_metrics["gamma"] * (d_spot ** 2),
+            "Theta P/L": wf_metrics["theta_daily"] * wf_days,
+            "Vega P/L": wf_metrics["vega_pct"] * wf_div_pts,
+            "Vanna P/L": wf_metrics["vanna"] * d_spot * (wf_div_pts / 100.0),
+        }
+        wf_fig = make_pnl_waterfall_figure(
+            wf_components,
+            title=f"{wf_side} P/L Attribution Waterfall (Spot {wf_ds_pct:+.1f}%, IV {wf_div_pts:+.1f} pts, {wf_days}d)",
+        )
+        st.plotly_chart(wf_fig, use_container_width=True, config=PLOTLY_CONFIG)
 st.markdown("---")
 st.subheader("Model Summary")
 summary = f"""Black-Scholes-Merton framework for spot=${spot:.2f}, strike=${strike:.2f}, DTE={dte}, IV={iv:.2f}%, r={rate * 100:.2f}%, dividend yield={dividend_yield * 100:.2f}%.
@@ -1596,3 +1621,13 @@ st.markdown(
     "<div style='text-align:center; color:#94a3b8; margin-top:16px;'>Built with Python, Streamlit, NumPy, SciPy, Pandas, and Plotly.</div>",
     unsafe_allow_html=True,
 )
+
+
+def main() -> None:
+    """CLI entrypoint to launch the Streamlit workstation via `pretrade` command."""
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    script_path = str(Path(__file__).resolve())
+    sys.exit(subprocess.call([sys.executable, "-m", "streamlit", "run", script_path]))

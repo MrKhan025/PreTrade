@@ -56,9 +56,9 @@ python -m unittest discover -s tests -v
 pytest -v
 ```
 
-## 🖥️ Workstation Tour (6 Interactive Tabs)
+## 🖥️ Workstation Tour (7 Interactive Tabs)
 
-Once you launch `streamlit run app.py`, use the **left sidebar** to set your market inputs (**Spot Price**, **Strike Price**, **Days to Expiry**, **Implied Volatility**, **Risk-Free Rate**, and **Dividend Yield**) and explore six specialized tabs:
+Once you launch `streamlit run app.py`, use the **left sidebar** to set your market inputs (**Spot Price**, **Strike Price**, **Days to Expiry**, **Implied Volatility**, **Risk-Free Rate**, and **Dividend Yield**) and explore seven specialized tabs:
 
 | Tab | What It Does | Key Insights Provided |
 | :--- | :--- | :--- |
@@ -174,21 +174,25 @@ where `N(·)` is the standard normal cumulative distribution function, `φ(·)` 
 
 ```text
 PreTrade/
-├── app.py                      # Streamlit interactive 6-tab options workstation
+├── app.py                      # Streamlit interactive 7-tab options workstation
 ├── black_scholes.py            # Core BSM pricing, 1st/2nd-order Greeks, IV solver, strategy engine
 ├── binomial.py                 # Cox-Ross-Rubinstein binomial tree (European & American)
 ├── monte_carlo.py              # Variance-reduced Monte Carlo pricing engine
-├── risk.py                     # Expected move, strategy PoP/E[PnL], portfolio VaR
-├── market_data.py              # Live quotes, option chain & ATM IV via yfinance
+├── risk.py                     # Expected move, strategy PoP/E[PnL], portfolio VaR & CVaR
+├── market_data.py              # Live quotes, option chain, history & ATM IV via yfinance
+├── streaming.py                # Demo simulator & Finnhub WebSocket real-time tick streamer
+├── config.py                   # Multi-source API key resolution (.env, secrets, env, JSON)
 ├── pdf_export.py               # Professional PDF trade-ticket generator (ReportLab)
-├── charts.py                   # Dark-mode Plotly 2D/3D visualizations
-├── requirements.txt
-├── pyproject.toml
+├── charts.py                   # Dark-mode Plotly 2D/3D & Studio visualizations
+├── .env.example                # Environment variable template for API keys
+├── requirements.txt            # Runtime & test dependencies
+├── pyproject.toml              # PEP 621 package metadata & tool configuration
 ├── tests/
-│   ├── test_black_scholes.py
-│   ├── test_advanced.py
-│   └── test_market_pdf.py
+│   ├── test_black_scholes.py   # BSM, parity, IV solver, and multi-leg strategy tests
+│   ├── test_advanced.py        # Binomial, Monte Carlo, and Risk engine tests
+│   └── test_market_pdf.py      # Market data, config, streaming, and PDF export tests
 ├── .github/workflows/ci.yml    # GitHub Actions CI (Python 3.10–3.12)
+├── CONTRIBUTING.md
 ├── README.md
 ├── LICENSE
 └── .gitignore
