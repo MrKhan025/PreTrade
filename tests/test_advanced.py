@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from binomial import crr_greeks, crr_price
 from black_scholes import bs_greeks_dividend, bs_price_dividend, strategy_preset
 from monte_carlo import mc_price
-from risk import expected_move, portfolio_var_delta_normal, strategy_risk_metrics
+from risk import expected_move, portfolio_var_delta_normal, position_sizing_recommendation, strategy_risk_metrics
 
 
 class TestAdvancedEngines(unittest.TestCase):
@@ -85,6 +85,26 @@ class TestAdvancedEngines(unittest.TestCase):
         self.assertGreater(var_res["var"], 0.0)
         self.assertGreaterEqual(var_res["cvar"], var_res["var"])
         self.assertGreater(var_res["pnl_std"], 0.0)
+
+
+    def test_position_sizing_recommendation(self):
+        res = position_sizing_recommendation(
+            account_size=25_000.0,
+            risk_pct=2.0,
+            max_loss_per_share=1.50,
+            max_profit_per_share=3.50,
+            prob_profit=55.0,
+        )
+        # Risk budget = $500, loss per contract = $150 -> 3 contracts ($450 risk)
+        self.assertEqual(res["recommended_contracts"], 3)
+        self.assertAlmostEqual(res["risk_budget_dollars"], 500.0)
+        self.assertAlmostEqual(res["total_dollar_risk"], 450.0)
+        self.assertAlmostEqual(res["total_dollar_max_profit"], 1050.0)
+        self.assertGreater(res["half_kelly_pct"], 0.0)
+
+    def test_position_sizing_zero_loss_edge_case(self):
+        res = position_sizing_recommendation(10_000.0, 1.0, 0.0, 2.0, 50.0)
+        self.assertEqual(res["recommended_contracts"], 0)
 
 
     def test_crr_invalid_inputs_raise(self):

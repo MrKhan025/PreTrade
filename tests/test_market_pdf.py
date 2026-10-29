@@ -131,5 +131,20 @@ class TestMarketDataConfigStreamingAndPDF(unittest.TestCase):
         self.assertGreater(len(pdf_bytes), 1000)
 
 
+    def test_finnhub_helper_functions(self):
+        src = finnhub_key_source("direct_key_abc")
+        self.assertEqual(src, "sidebar")
+        val = get_finnhub_api_key("direct_key_abc")
+        self.assertEqual(val, "direct_key_abc")
+
+    def test_stream_snapshot_structure(self):
+        from streaming import get_manager, stream_snapshot
+        mgr = get_manager()
+        snap = stream_snapshot()
+        self.assertIsNotNone(mgr)
+        self.assertIn("status", snap)
+        self.assertIn("latest", snap)
+
+
 if __name__ == "__main__":
     unittest.main()
