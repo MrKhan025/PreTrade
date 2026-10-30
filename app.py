@@ -38,12 +38,10 @@ from charts import (
 from binomial import crr_price, crr_greeks
 from monte_carlo import mc_price
 from risk import expected_move, strategy_risk_metrics, portfolio_var_delta_normal, position_sizing_recommendation
-from streaming import start_stream, stop_stream, stream_snapshot, apply_stream_price_to_quote, get_manager
+from streaming import start_stream, stop_stream, stream_snapshot
 from config import get_finnhub_api_key, finnhub_key_source, mask_key
 from market_data import (
     load_market_defaults,
-    fetch_quote,
-    fetch_option_chain_summary,
     fetch_price_history,
     fetch_quotes_batch,
     fetch_intraday_bars,
@@ -1059,8 +1057,8 @@ with strategy_tab:
             st.metric("Reward / Risk", f"{rm['reward_risk']:.2f}x")
         with r3:
             st.metric("Max Profit / Max Loss", f"${rm['max_profit']:.2f} / ${rm['max_loss']:.2f}")
-    except Exception:
-        pass
+    except Exception as exc:
+        st.caption(f"Risk metrics unavailable: {exc}")
 
 
     st.markdown("#### Net Strategy Greeks (Per 1x Spread Unit)")
