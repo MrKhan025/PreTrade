@@ -12,10 +12,12 @@ Resolves the Finnhub API key (and optional supplemental provider keys) across:
 from __future__ import annotations
 
 import json
+import logging
 import os
 from pathlib import Path
 from typing import Any
 
+logger = logging.getLogger(__name__)
 PROJECT_ROOT = Path(__file__).resolve().parent
 ENV_FILE = PROJECT_ROOT / ".env"
 LOCAL_JSON_FILE = PROJECT_ROOT / "config.local.json"
@@ -40,8 +42,8 @@ def _parse_dotenv(dotenv_path: Path = ENV_FILE) -> dict[str, str]:
                 val = val[1:-1]
             if key:
                 values[key] = val
-    except OSError:
-        pass
+    except OSError as exc:
+        logger.debug("Could not read .env file: %s", exc)
     return values
 
 

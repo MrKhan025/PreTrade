@@ -9,6 +9,7 @@ Supports:
 from __future__ import annotations
 
 import json
+import logging
 import threading
 from datetime import datetime, timezone
 from typing import Any, Sequence
@@ -16,6 +17,8 @@ from typing import Any, Sequence
 import numpy as np
 
 from market_data import fetch_quote
+
+logger = logging.getLogger(__name__)
 
 
 class StreamManager:
@@ -107,8 +110,8 @@ class StreamManager:
         if ws is not None:
             try:
                 ws.close()
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("WebSocket operation ignored: %s", exc)
         thread = self._thread
         if thread is not None and thread.is_alive():
             thread.join(timeout=1.0)
@@ -179,8 +182,8 @@ class StreamManager:
             for sym in syms:
                 try:
                     ws.send(json.dumps({"type": "subscribe", "symbol": sym}))
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.debug("WebSocket subscribe ignored: %s", exc)
 
         def on_message(_ws: Any, message: str) -> None:
             try:
@@ -196,8 +199,8 @@ class StreamManager:
                     with self._lock:
                         self._status = "error"
                         self._error = str(payload.get("msg") or "Finnhub stream error")
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("WebSocket operation ignored: %s", exc)
 
         def on_error(_ws: Any, error: Any) -> None:
             with self._lock:

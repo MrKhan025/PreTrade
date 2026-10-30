@@ -8,6 +8,7 @@ via `yfinance`, with automatic deterministic fallback when offline or in test en
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any, Sequence
 
@@ -15,6 +16,8 @@ import numpy as np
 import pandas as pd
 
 from black_scholes import bs_price_dividend
+
+logger = logging.getLogger(__name__)
 
 _FALLBACK_TICKERS: dict[str, dict[str, Any]] = {
     "AAPL": {"name": "Apple Inc.", "price": 228.50, "prev_close": 226.40, "iv": 24.5, "div": 0.0044},
@@ -52,8 +55,8 @@ def fetch_risk_free_rate(default: float = 0.045) -> float:
             last_yield_pct = float(hist["Close"].dropna().iloc[-1])
             if 0.0 <= last_yield_pct <= 25.0:
                 return round(last_yield_pct / 100.0, 4)
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("yfinance fallback triggered: %s", exc)
     return float(default)
 
 
@@ -95,8 +98,8 @@ def fetch_quote(symbol: str) -> dict[str, Any]:
                     "as_of": now_str,
                     "source": "yfinance",
                 }
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("yfinance fallback triggered: %s", exc)
 
     prof = _fallback_profile(sym)
     price = float(prof["price"])
@@ -245,8 +248,8 @@ def fetch_option_chain_summary(
                     "error": None,
                     "source": "yfinance",
                 }
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("yfinance fallback triggered: %s", exc)
 
     return _build_synthetic_chain_summary(
         symbol=sym,
@@ -295,8 +298,8 @@ def fetch_price_history(
             if "Datetime" in df.columns and "Date" not in df.columns:
                 df = df.rename(columns={"Datetime": "Date"})
             return df
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("yfinance fallback triggered: %s", exc)
 
     prof = _fallback_profile(sym)
     period_map = {"1d": 2, "5d": 5, "1mo": 22, "3mo": 65, "6mo": 126, "1y": 252, "2y": 504}
@@ -344,8 +347,8 @@ def fetch_intraday_bars(
             if "Datetime" in df.columns and "Date" not in df.columns:
                 df = df.rename(columns={"Datetime": "Date"})
             return df
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("yfinance fallback triggered: %s", exc)
 
     prof = _fallback_profile(sym)
     n_bars = 120
