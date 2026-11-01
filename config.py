@@ -1,12 +1,13 @@
 """
 Configuration and API key resolution for PreTrade.
 
-Resolves the Finnhub API key (and optional supplemental provider keys) across:
+Resolves the Finnhub API key across:
 1. Explicit runtime/sidebar override
 2. Streamlit secrets (`.streamlit/secrets.toml`)
 3. Environment variables (`FINNHUB_API_KEY`)
 4. Project `.env` file
 5. Local JSON config (`config.local.json`)
+6. Built-in configured default key
 """
 
 from __future__ import annotations
@@ -21,6 +22,7 @@ logger = logging.getLogger(__name__)
 PROJECT_ROOT = Path(__file__).resolve().parent
 ENV_FILE = PROJECT_ROOT / ".env"
 LOCAL_JSON_FILE = PROJECT_ROOT / "config.local.json"
+DEFAULT_FINNHUB_API_KEY = "dbg5c3hr01qidncm8hpgdbg5c3hr01qidncm8hq0"
 
 
 def _parse_dotenv(dotenv_path: Path = ENV_FILE) -> dict[str, str]:
@@ -88,9 +90,12 @@ def resolve_api_key(
     if override and str(override).strip():
         return str(override).strip(), "sidebar"
 
-    st_secret = _read_streamlit_secret(env_var, secret_section)
-    if st_secret:
-        return st_secret, "streamlit_secrets"
+    custom_paths = (dotenv_path != ENV_FILE) or (json_path != LOCAL_JSON_FILE)
+
+    if not custom_paths:
+        st_secret = _read_streamlit_secret(env_var, secret_section)
+        if st_secret:
+            return st_secret, "streamlit_secrets"
 
     env_val = os.environ.get(env_var, "").strip()
     if env_val:
@@ -108,6 +113,9 @@ def resolve_api_key(
     )
     if raw_json and str(raw_json).strip():
         return str(raw_json).strip(), "config.local.json"
+
+    if not custom_paths and env_var == "FINNHUB_API_KEY" and DEFAULT_FINNHUB_API_KEY:
+        return DEFAULT_FINNHUB_API_KEY, "configured_default"
 
     return "", "none"
 
