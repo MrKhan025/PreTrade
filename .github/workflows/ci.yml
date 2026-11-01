@@ -10,6 +10,9 @@ on:
 permissions:
   contents: read
 
+env:
+  FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY || 'dbg5c3hr01qidncm8hpgdbg5c3hr01qidncm8hq0' }}
+
 jobs:
   test:
     name: Python ${{ matrix.python-version }}
@@ -20,23 +23,34 @@ jobs:
         python-version: ["3.10", "3.11", "3.12"]
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout repository (Node 24)
+        uses: actions/checkout@v5
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - name: Set up Python ${{ matrix.python-version }} (Node 24)
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
 
+      - name: Normalize repository structure if legacy files exist
+        run: |
+          [ -f "Black Scholes.py" ] && [ ! -f "black_scholes.py" ] && cp "Black Scholes.py" "black_scholes.py" || true
+          [ -f "Charts.py" ] && [ ! -f "charts.py" ] && cp "Charts.py" "charts.py" || true
+          [ -f "Requirements.txt" ] && [ ! -f "requirements.txt" ] && cp "Requirements.txt" "requirements.txt" || true
+          mkdir -p tests
+          [ -f "Test Black Scholes.py" ] && [ ! -f "tests/test_black_scholes.py" ] && cp "Test Black Scholes.py" "tests/test_black_scholes.py" || true
+          [ -f "test_black_scholes.py" ] && [ ! -f "tests/test_black_scholes.py" ] && cp "test_black_scholes.py" "tests/test_black_scholes.py" || true
+          [ -f "test_advanced.py" ] && [ ! -f "tests/test_advanced.py" ] && cp "test_advanced.py" "tests/test_advanced.py" || true
+          [ -f "test_market_pdf.py" ] && [ ! -f "tests/test_market_pdf.py" ] && cp "test_market_pdf.py" "tests/test_market_pdf.py" || true
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; elif [ -f Requirements.txt ]; then pip install -r Requirements.txt; fi
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           pip install pytest
 
       - name: Run unit tests via pytest
-        run: pytest -v
+        run: pytest tests -v
 
       - name: Run unit tests via unittest discovery
         run: python -m unittest discover -s tests -v
